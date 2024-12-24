@@ -3,54 +3,80 @@ import { StyleSheet, Dimensions } from 'react-native';
 const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-    card: {
-        width: width * 0.9,
-        height: height * 0.7,
-        borderRadius: 16,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
-        overflow: 'hidden',
-      },
+  card: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 100,
+  },
   image: {
     width: '100%',
-    height: '60%',
+    height: '100%',
+    position: 'absolute',
+  },
+  overlay: {
+    position: 'absolute',
+    bottom: 0,
+    height: '40%',
+    width: '100%',
+    backgroundColor: 'transparent',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    height: '33.33%',
+    width: '100%',
+    zIndex: 1,
   },
   infoContainer: {
-    padding: 16,
+    position: 'absolute',
+    bottom: 90,
+    left: 20,
+    right: 20,
   },
-  name: {
-    fontSize: 20,
+  title: {
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 4,
+    color: '#fff',
   },
   type: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#ccc',
     marginBottom: 4,
   },
   description: {
     fontSize: 14,
-    color: '#444',
+    color: '#ddd',
     marginBottom: 8,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  rating: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFB800',
   },
   distance: {
     fontSize: 12,
-    color: '#666',
+    color: '#fff',
+  },
+  rating: {
+    fontSize: 12,
+    color: '#ffd700',
+  },
+  actions: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+  },
+  button: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
   },
 });
-
 export default styles;

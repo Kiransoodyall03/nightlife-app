@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
-import VenueCard, { Venue } from '../../../src/components/VenueCard';
+import VenueCard from '../../../src/components/VenueCard';
+import  {Venue}  from '../../../src/components/VenueCard';
 import styles from './styles';
 
 // Sample data - replace with real data later

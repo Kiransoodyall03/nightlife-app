@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, Image, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { Heart, RotateCw, X } from 'lucide-react-native';
+ // Replace with React Native compatible icons
 import styles from './styles';
-
-const { width } = Dimensions.get('window');
 
 export interface Venue {
   id: string;
@@ -11,34 +11,45 @@ export interface Venue {
   description: string;
   type: string;
   rating: number;
-  distance?: string;
+  distance: string;
 }
 
 interface VenueCardProps {
   venue: Venue;
 }
 
-export default function VenueCard({ venue }: VenueCardProps) {
+const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
   return (
     <View style={styles.card}>
-<Image
-  source={{ uri: venue.image }}
-  style={styles.image}
-  resizeMode="cover"
-  onError={(e) => console.log('Image Load Error:', e.nativeEvent.error)}
-/>
+      {/* Venue Image */}
+      <Image source={{ uri: venue.image }} style={styles.image} />
 
+      {/* Gradient Overlay */}
+      <View style={styles.overlay} />
+
+      {/* Venue Info */}
       <View style={styles.infoContainer}>
-        <Text style={styles.name}>{venue.name}</Text>
+        <Text style={styles.title}>{venue.name}</Text>
         <Text style={styles.type}>{venue.type}</Text>
         <Text style={styles.description}>{venue.description}</Text>
-        <View style={styles.footer}>
-          <Text style={styles.rating}>★ {venue.rating.toFixed(1)}</Text>
-          {venue.distance && (
-            <Text style={styles.distance}>{venue.distance}</Text>
-          )}
-        </View>
+        <Text style={styles.distance}>Distance: {venue.distance}</Text>
+        <Text style={styles.rating}>Rating: {venue.rating}</Text>
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.button}>
+          <X size={28} color="red" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button}>
+          <RotateCw size={28} color="yellow" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button}>
+          <Heart size={28} color="green" />
+        </TouchableOpacity>
       </View>
     </View>
   );
-}
+};
+
+export default VenueCard;
