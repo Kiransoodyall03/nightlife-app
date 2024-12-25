@@ -5,13 +5,14 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import DiscoverScreen from '../app/tabs/discover';
 import MapScreen from '../app/tabs/map';
-import ProfileScreen from '../app/tabs/profile';
+import ProfileScreen from '../app/tabs/profile'
 
 const Tab = createBottomTabNavigator();
 
 // Import icons directly
-const discoverIcon = require('./assets/icons/discover-icon.png');
-
+const discoverIcon = require('@assets/icons/discover-icon.png');
+const groupicon = require('@assets/icons/group-icon.png');
+const profileIcon = require('@assets/icons/profile-icon.png');
 export default function App() {
   return (
     <NavigationContainer>
@@ -58,12 +59,12 @@ export default function App() {
         />
         {/* Temporarily using the same icon for other tabs until you add their icons */}
         <Tab.Screen
-          name="Map"
+          name="My Group"
           component={MapScreen}
           options={{
             tabBarIcon: ({ focused }) => (
               <Image
-                source={discoverIcon}
+                source={groupicon}
                 style={[
                   styles.tabIcon,
                   { tintColor: focused ? '#007AFF' : '#8E8E93' }
@@ -73,12 +74,12 @@ export default function App() {
           }}
         />
         <Tab.Screen
-          name="Profile"
+          name="My Profile"
           component={ProfileScreen}
           options={{
             tabBarIcon: ({ focused }) => (
               <Image
-                source={discoverIcon}
+                source={profileIcon}
                 style={[
                   styles.tabIcon,
                   { tintColor: focused ? '#007AFF' : '#8E8E93' }
