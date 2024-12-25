@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function MapScreen() {
+export default function GroupScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Explore Map</Text>
+      <Text style={styles.title}>My Groups</Text>
     </View>
   );
 }

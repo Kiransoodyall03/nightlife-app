@@ -4,7 +4,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import DiscoverScreen from '../app/tabs/discover';
-import MapScreen from '../app/tabs/map';
+import GroupScreen from '../app/tabs/group';
 import ProfileScreen from '../app/tabs/profile'
 
 const Tab = createBottomTabNavigator();
@@ -60,7 +60,7 @@ export default function App() {
         {/* Temporarily using the same icon for other tabs until you add their icons */}
         <Tab.Screen
           name="My Group"
-          component={MapScreen}
+          component={GroupScreen}
           options={{
             tabBarIcon: ({ focused }) => (
               <Image
