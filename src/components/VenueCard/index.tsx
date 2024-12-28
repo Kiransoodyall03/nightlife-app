@@ -5,8 +5,6 @@ import { X, RotateCw, Heart } from 'lucide-react-native';
 import Button from '../Button';
 import styles from './styles';
 
-const { width } = Dimensions.get('window');
-
 export interface Venue {
   id: string;
   name: string;

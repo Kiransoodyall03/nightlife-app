@@ -1,77 +1,89 @@
-// components/VenueCard/styles.ts
 import { StyleSheet, Dimensions } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.9; // 90% of screen width
+const CARD_HEIGHT = height * 0.8; // 70% of screen height
 
 export default StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: height * 0.1, // Moves card higher up
+  },
   card: {
-    width: width,
-    height: '100%',
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
     backgroundColor: '#000',
-    marginTop: -60,
-    marginLeft: -10,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
-    height: '60%',
+    height: '65%',
     position: 'relative',
   },
   infoContainer: {
-    padding: 16,
+    flex: 1,
+    padding: width * 0.04,
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'space-between',
+    maxHeight: '45%',
   },
   name: {
-    fontSize: 24,
+    fontSize: Math.max(24, width * 0.06),
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 8,
+    marginBottom: height * 0.01,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: width * 0.02,
+    marginBottom: height * 0.015,
   },
   tag: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: width * 0.03,
+    paddingVertical: height * 0.008,
     borderRadius: 16,
   },
   tagText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: Math.max(14, width * 0.035),
   },
   type: {
-    fontSize: 16,
+    fontSize: Math.max(16, width * 0.04),
     color: '#fff',
-    marginBottom: 8,
+    marginBottom: height * 0.01,
   },
   description: {
-    fontSize: 14,
+    fontSize: Math.max(14, width * 0.035),
     color: '#fff',
-    marginBottom: 12,
+    marginBottom: height * 0.015,
+    lineHeight: 20,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: height * 0.02,
   },
   rating: {
-    fontSize: 16,
+    fontSize: Math.max(16, width * 0.04),
     color: '#FFD700',
   },
   distance: {
-    fontSize: 16,
+    fontSize: Math.max(16, width * 0.04),
     color: '#fff',
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    gap: 12,
+    gap: width * 0.03,
+    paddingBottom: height * 0.02,
   },
 });
