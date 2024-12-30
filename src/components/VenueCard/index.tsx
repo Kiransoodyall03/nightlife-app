@@ -39,15 +39,15 @@ export default function VenueCard({ venue, onLike, onDislike, onReview }: VenueC
         <Text style={styles.name}>{venue.name}</Text>
         
         {/* Tags Section */}
-        {venue.tags && (
-          <View style={styles.tagsContainer}>
-            {venue.tags.map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {Array.isArray(venue.tags) && venue.tags.length > 0 && (
+  <View style={styles.tagsContainer}>
+    {venue.tags.map((tag) => (
+      <View style={styles.tag} key={tag}>  {/* Key applied here for React */}
+        <Text style={styles.tagText}>{tag}</Text>
+      </View>
+    ))}
+  </View>
+)}
 
         <Text style={styles.type}>{venue.type}</Text>
         <Text style={styles.description}>{venue.description}</Text>
@@ -62,25 +62,25 @@ export default function VenueCard({ venue, onLike, onDislike, onReview }: VenueC
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-  <Button
-    onPress={onDislike}
-    variant="danger"
-    size="medium"
-    icon={<X size={24} color="#DC3545" />}
-  />
-  <Button
-    onPress={onReview}
-    variant="secondary"
-    size="medium"
-    icon={<RotateCw size={24} color="#6C757D" />}
-  />
-  <Button
-    onPress={onLike}
-    variant="primary"
-    size="medium"
-    icon={<Heart size={24} color="#007AFF" />}
-  />
-</View>
+          <Button
+            onPress={onDislike}
+            variant="danger"
+            size="medium"
+            icon={<X size={24} color="#DC3545" />}
+          />
+          <Button
+            onPress={onReview}
+            variant="secondary"
+            size="medium"
+            icon={<RotateCw size={24} color="#6C757D" />}
+          />
+          <Button
+            onPress={onLike}
+            variant="primary"
+            size="medium"
+            icon={<Heart size={24} color="#007AFF" />}
+          />
+        </View>
       </View>
     </View>
   );

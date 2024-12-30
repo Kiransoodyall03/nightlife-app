@@ -1,11 +1,9 @@
-import { Tabs } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
-import { useState } from 'react';
+import React, { useState, useRef, forwardRef } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRef } from 'react';
-import { SidebarNavigation } from '../../src/components/SideBar-Nav'
-import { DrawerLayoutAndroid } from 'react-native';
-
+import { DrawerLayoutAndroid } from 'react-native'; // Import DrawerLayoutAndroid
+import { FontAwesome } from '@expo/vector-icons'; // If using FontAwesome icons
+import { SidebarNavigation } from '../../src/components/SideBar-Nav'; // Your custom sidebar component
+import { Tabs } from 'expo-router'; // If using expo-router for navigation
 export default function TabLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const drawerRef = useRef<DrawerLayoutAndroid>(null);
@@ -24,7 +22,6 @@ export default function TabLayout() {
 
   return (
     <DrawerLayoutAndroid
-      ref={drawerRef}
       drawerWidth={300}
       drawerPosition="left"
       renderNavigationView={renderSidebar}
