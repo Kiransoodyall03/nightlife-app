@@ -84,6 +84,4 @@ export default function VenueCard({ venue, onLike, onDislike, onReview }: VenueC
       </View>
     </View>
   );
-};
-
-export default VenueCard;
+}
