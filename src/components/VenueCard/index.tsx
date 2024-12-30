@@ -1,7 +1,8 @@
+// components/VenueCard/index.tsx
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { Heart, RotateCw, X } from 'lucide-react-native';
- // Replace with React Native compatible icons
+import { View, Text, Image, Dimensions } from 'react-native';
+import { X, RotateCw, Heart } from 'lucide-react-native';
+import Button from '../Button';
 import styles from './styles';
 
 export interface Venue {
@@ -11,42 +12,75 @@ export interface Venue {
   description: string;
   type: string;
   rating: number;
-  distance: string;
+  distance?: string;
+  tags?: string[];
 }
 
 interface VenueCardProps {
   venue: Venue;
+  onLike?: () => void;
+  onDislike?: () => void;
+  onReview?: () => void;
 }
 
-const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
+export default function VenueCard({ venue, onLike, onDislike, onReview }: VenueCardProps) {
   return (
     <View style={styles.card}>
       {/* Venue Image */}
-      <Image source={{ uri: venue.image }} style={styles.image} />
+      <Image
+        source={{ uri: venue.image }}
+        style={styles.image}
+        resizeMode="cover"
+        onError={(e) => console.log('Image Load Error:', e.nativeEvent.error)}
+      />
 
-      {/* Gradient Overlay */}
-      <View style={styles.overlay} />
-
-      {/* Venue Info */}
+      {/* Venue Information */}
       <View style={styles.infoContainer}>
-        <Text style={styles.title}>{venue.name}</Text>
+        <Text style={styles.name}>{venue.name}</Text>
+        
+        {/* Tags Section */}
+        {venue.tags && (
+          <View style={styles.tagsContainer}>
+            {venue.tags.map((tag, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         <Text style={styles.type}>{venue.type}</Text>
         <Text style={styles.description}>{venue.description}</Text>
-        <Text style={styles.distance}>Distance: {venue.distance}</Text>
-        <Text style={styles.rating}>Rating: {venue.rating}</Text>
-      </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.button}>
-          <X size={28} color="red" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button}>
-          <RotateCw size={28} color="yellow" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button}>
-          <Heart size={28} color="green" />
-        </TouchableOpacity>
+        {/* Rating and Distance */}
+        <View style={styles.footer}>
+          <Text style={styles.rating}>★ {venue.rating.toFixed(1)}</Text>
+          {venue.distance && (
+            <Text style={styles.distance}>{venue.distance}</Text>
+          )}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+  <Button
+    onPress={onDislike}
+    variant="danger"
+    size="medium"
+    icon={<X size={24} color="#DC3545" />}
+  />
+  <Button
+    onPress={onReview}
+    variant="secondary"
+    size="medium"
+    icon={<RotateCw size={24} color="#6C757D" />}
+  />
+  <Button
+    onPress={onLike}
+    variant="primary"
+    size="medium"
+    icon={<Heart size={24} color="#007AFF" />}
+  />
+</View>
       </View>
     </View>
   );

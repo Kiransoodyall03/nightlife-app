@@ -1,54 +1,71 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.9; // 90% of screen width
+const CARD_HEIGHT = height * 0.8; // 70% of screen height
 
-const styles = StyleSheet.create({
-  card: {
+export default StyleSheet.create({
+  container: {
     flex: 1,
-    borderRadius: 10,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: height * 0.1, // Moves card higher up
+  },
+  card: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    backgroundColor: '#000',
+    borderRadius: 20,
     overflow: 'hidden',
-    position: 'relative',
-    marginBottom: 100,
   },
   image: {
     width: '100%',
-    height: '100%',
-    position: 'absolute',
-  },
-  overlay: {
-    position: 'absolute',
-    bottom: 0,
-    height: '40%',
-    width: '100%',
-    backgroundColor: 'transparent',
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    height: '33.33%',
-    width: '100%',
-    zIndex: 1,
+    height: '65%',
+    position: 'relative',
   },
   infoContainer: {
+    flex: 1,
+    padding: width * 0.04,
     position: 'absolute',
-    bottom: 90,
-    left: 20,
-    right: 20,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'space-between',
+    maxHeight: '45%',
   },
-  title: {
-    fontSize: 24,
+  name: {
+    fontSize: Math.max(24, width * 0.06),
     fontWeight: 'bold',
     color: '#fff',
+    marginBottom: height * 0.01,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: width * 0.02,
+    marginBottom: height * 0.015,
+  },
+  tag: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: width * 0.03,
+    paddingVertical: height * 0.008,
+    borderRadius: 16,
+  },
+  tagText: {
+    color: '#fff',
+    fontSize: Math.max(14, width * 0.035),
   },
   type: {
-    fontSize: 16,
-    color: '#ccc',
-    marginBottom: 4,
+    fontSize: Math.max(16, width * 0.04),
+    color: '#fff',
+    marginBottom: height * 0.01,
   },
   description: {
-    fontSize: 14,
-    color: '#ddd',
-    marginBottom: 8,
+    fontSize: Math.max(14, width * 0.035),
+    color: '#fff',
+    marginBottom: height * 0.015,
+    lineHeight: 20,
   },
   distance: {
     fontSize: 12,
@@ -64,19 +81,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: height * 0.02,
   },
-  button: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
+  rating: {
+    fontSize: Math.max(16, width * 0.04),
+    color: '#FFD700',
+  },
+  distance: {
+    fontSize: Math.max(16, width * 0.04),
+    color: '#fff',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: width * 0.03,
+    paddingBottom: height * 0.02,
   },
 });
-export default styles;

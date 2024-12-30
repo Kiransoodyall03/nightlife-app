@@ -4,8 +4,8 @@ import { TouchableOpacity, Text, ViewStyle, TextStyle, ActivityIndicator } from 
 import styles from './styles';
 
 export interface ButtonProps {
-  onPress: () => void;
-  title: string;
+  onPress?: () => void;  // Made optional with ?
+  title?: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'danger';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
@@ -16,7 +16,7 @@ export interface ButtonProps {
 }
 
 export default function Button({ 
-  onPress, 
+  onPress = () => {},  // Add default empty function
   title, 
   variant = 'primary',
   size = 'medium',
@@ -40,19 +40,21 @@ export default function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? '#007AFF' : '#FFFFFF'} />
+        <ActivityIndicator color={styles[`${variant}Text`].color} />
       ) : (
         <>
           {icon && icon}
-          <Text style={[
-            styles.text,
-            styles[`${variant}Text`],
-            styles[`${size}Text`],
-            disabled && styles.disabledText,
-            textStyle
-          ]}>
-            {title}
-          </Text>
+          {title && (
+            <Text style={[
+              styles.text,
+              styles[`${variant}Text`],
+              styles[`${size}Text`],
+              disabled && styles.disabledText,
+              textStyle
+            ]}>
+              {title}
+            </Text>
+          )}
         </>
       )}
     </TouchableOpacity>

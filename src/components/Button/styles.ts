@@ -3,60 +3,59 @@ import { StyleSheet } from 'react-native';
 
 export default StyleSheet.create({
   button: {
-    borderRadius: 8,
+    borderRadius: 50, // Make it circular
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    backgroundColor: 'transparent', // Transparent background
+    borderWidth: 2,
   },
   
   // Variant styles
   primaryButton: {
-    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
   },
   secondaryButton: {
-    backgroundColor: '#6C757D',
+    borderColor: '#6C757D',
   },
   outlineButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
     borderColor: '#007AFF',
   },
   dangerButton: {
-    backgroundColor: '#DC3545',
+    borderColor: '#DC3545',
   },
 
-  // Size styles
+  // Size styles - making them square to ensure circle shape
   smallButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    width: 40,
+    height: 40,
   },
   mediumButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    width: 56,
+    height: 56,
   },
   largeButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    width: 72,
+    height: 72,
   },
 
-  // Text base style
+  // Text styles
   text: {
     fontWeight: '600',
   },
 
   // Text variant styles
   primaryText: {
-    color: '#FFFFFF',
+    color: '#007AFF',
   },
   secondaryText: {
-    color: '#FFFFFF',
+    color: '#6C757D',
   },
   outlineText: {
     color: '#007AFF',
   },
   dangerText: {
-    color: '#FFFFFF',
+    color: '#DC3545',
   },
 
   // Text size styles
