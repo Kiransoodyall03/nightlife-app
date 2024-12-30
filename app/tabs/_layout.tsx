@@ -11,7 +11,7 @@ export default function TabLayout() {
   const handleLogout = () => {
     // Implement logout logic
     console.log('Logging out...');
-  };
+  };``
 
   const renderSidebar = () => (
     <SidebarNavigation
@@ -22,22 +22,29 @@ export default function TabLayout() {
 
   return (
     <DrawerLayoutAndroid
+      ref={drawerRef}
       drawerWidth={300}
       drawerPosition="left"
       renderNavigationView={renderSidebar}
     >
       <Tabs
         screenOptions={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: 'white',
+          },
+          headerTitleStyle: {
+            color: 'black',
+          },
           tabBarActiveTintColor: '#FF4B6F',
           tabBarInactiveTintColor: '#999999',
           tabBarStyle: {
             borderTopWidth: 1,
             borderTopColor: '#f0f0f0',
           },
-          // Add hamburger menu to header
           headerLeft: () => (
             <TouchableOpacity
-              style={styles.menuButton}
+              style={[styles.menuButton, { marginLeft: 8 }]}
               onPress={() => drawerRef.current?.openDrawer()}
             >
               <FontAwesome name="bars" size={24} color="#333" />
@@ -48,7 +55,15 @@ export default function TabLayout() {
         <Tabs.Screen
           name="discover"
           options={{
-            title: 'Discover',
+            title: 'Disocver',
+            headerLeft: () => (
+              <TouchableOpacity
+                style={[styles.menuButton, { marginLeft: 8 }]}
+                onPress={() => drawerRef.current?.openDrawer()}
+              >
+                <FontAwesome name="bars" size={24} color="#333" />
+              </TouchableOpacity>
+            ),
             tabBarIcon: ({ color }) => (
               <FontAwesome name="fire" size={24} color={color} />
             ),
@@ -58,6 +73,14 @@ export default function TabLayout() {
           name="map"
           options={{
             title: 'Explore',
+            headerLeft: () => (
+              <TouchableOpacity
+                style={[styles.menuButton, { marginLeft: 8 }]}
+                onPress={() => drawerRef.current?.openDrawer()}
+              >
+                <FontAwesome name="bars" size={24} color="#333" />
+              </TouchableOpacity>
+            ),
             tabBarIcon: ({ color }) => (
               <FontAwesome name="map" size={24} color={color} />
             ),
@@ -67,6 +90,14 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: 'Profile',
+            headerLeft: () => (
+              <TouchableOpacity
+                style={[styles.menuButton, { marginLeft: 8 }]}
+                onPress={() => drawerRef.current?.openDrawer()}
+              >
+                <FontAwesome name="bars" size={24} color="#333" />
+              </TouchableOpacity>
+            ),
             tabBarIcon: ({ color }) => (
               <FontAwesome name="user" size={24} color={color} />
             ),
@@ -79,6 +110,9 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   menuButton: {
-    padding: 15,
+    padding: 10,
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -2,6 +2,8 @@
 import React from 'react';
 import { View, Text, Image, Dimensions } from 'react-native';
 import { X, RotateCw, Heart } from 'lucide-react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Button from '../Button';
 import styles from './styles';
 
