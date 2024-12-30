@@ -67,19 +67,7 @@ export default StyleSheet.create({
     marginBottom: height * 0.015,
     lineHeight: 20,
   },
-  distance: {
-    fontSize: 12,
-    color: '#fff',
-  },
-  rating: {
-    fontSize: 12,
-    color: '#ffd700',
-  },
-  actions: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
+  footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: height * 0.02,
