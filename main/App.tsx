@@ -4,12 +4,13 @@ import 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/drawer';
-import { CompositeNavigationProp, ParamListBase } from '@react-navigation/native';
-import type { BottomTabNavigationProp, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import DiscoverScreen from '../app/tabs/discover';
 import GroupScreen from '../app/tabs/group';
 import ProfileScreen from '../app/tabs/profile';
 import { SidebarNavigation } from 'src/components/SideBar-Nav';
+import TitleComponent from '../src/components/Title/title-animated';
 
 type TabParamList = {
   Discover: undefined;
@@ -51,6 +52,15 @@ function TabNavigator() {
             />
           </TouchableOpacity>
         ),
+        headerTitle: () => (
+          <View style={styles.headerTitleContainer}>
+            <Image
+              source={require('@assets/icons/discover-icon.png')}
+              style={styles.headerIcon}
+            />
+            <TitleComponent text="NightLife" />
+          </View>
+        ),
         tabBarStyle: {
           height: 60,
           paddingBottom: 5,
@@ -69,19 +79,12 @@ function TabNavigator() {
         },
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#8E8E93',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
+        tabBarLabel: () => null,
         headerStyle: {
           elevation: 0,
           shadowOpacity: 0,
           borderBottomWidth: 1,
           borderBottomColor: '#E5E5E5',
-        },
-        headerTitleStyle: {
-          fontSize: 18,
-          fontWeight: '600',
         },
       })}
     >
@@ -89,12 +92,11 @@ function TabNavigator() {
         name="Discover"
         component={DiscoverScreen}
         options={{
+          headerTitle: () => <TitleComponent text="NightLife" />,
           tabBarIcon: ({ focused }) => (
             <Image
               source={require('@assets/icons/discover-icon.png')}
-              style={[
-                styles.tabIcon
-              ]}
+              style={styles.tabIcon}
             />
           ),
         }}
@@ -103,12 +105,11 @@ function TabNavigator() {
         name="My Group"
         component={GroupScreen}
         options={{
+          headerTitle: () => <TitleComponent text="My Group" />,
           tabBarIcon: ({ focused }) => (
             <Image
               source={require('@assets/icons/group-icon.png')}
-              style={[
-                styles.tabIcon
-              ]}
+              style={styles.tabIcon}
             />
           ),
         }}
@@ -117,12 +118,11 @@ function TabNavigator() {
         name="My Profile"
         component={ProfileScreen}
         options={{
+          headerTitle: () => <TitleComponent text="My Profile" />,
           tabBarIcon: ({ focused }) => (
             <Image
               source={require('@assets/icons/profile-icon.png')}
-              style={[
-                styles.tabIcon
-              ]}
+              style={styles.tabIcon}
             />
           ),
         }}
@@ -150,7 +150,7 @@ export default function App() {
           drawerStyle: {
             width: DRAWER_WIDTH,
           },
-          headerShown: false, // Hide the drawer navigator's header
+          headerShown: false,
         }}
       >
         <Drawer.Screen 
@@ -168,6 +168,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+    resizeMode: 'contain',
   },
   tabIcon: {
     width: 24,
