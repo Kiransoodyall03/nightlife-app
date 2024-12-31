@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import styles from './styles';
+import TitleComponent from '../Title/title-animated'; // Make sure the path is correct
 
 const { width, height } = Dimensions.get('window');
 const SIDEBAR_WIDTH = width * 0.75;
@@ -22,41 +23,27 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     router.push(route);
   };
 
-  const navigateToProfile = () => {
-    navigateTo('My Profile');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
+      <TitleComponent text="NightLife" /> {/* Add the TitleComponent here */}
+      
       <View style={styles.profileSection}>
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: profileImage }}
-            style={styles.profileImage}
-          />
+          <Image source={{ uri: profileImage }} style={styles.profileImage} />
         </View>
       </View>
 
       <View style={styles.navigationSection}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigateTo('/profile')}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo('/profile')}>
           <Text style={styles.navText}>My Profile</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigateTo('/settings')}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo('/settings')}>
           <Text style={styles.navText}>Settings</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={onLogout}
-      >
+      <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </SafeAreaView>
