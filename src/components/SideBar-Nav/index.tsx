@@ -22,6 +22,10 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     router.push(route);
   };
 
+  const navigateToProfile = () => {
+    navigateTo('My Profile');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.profileSection}>

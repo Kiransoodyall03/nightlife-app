@@ -18,9 +18,9 @@ export default StyleSheet.create({
       justifyContent: 'center',
     },
     imageContainer: {
-      width: SIDEBAR_WIDTH * 0.4,
-      height: SIDEBAR_WIDTH * 0.4,
-      borderRadius: SIDEBAR_WIDTH * 0.2,
+      width: SIDEBAR_WIDTH * 0.6,
+      height: SIDEBAR_WIDTH * 0.6,
+      borderRadius: SIDEBAR_WIDTH * 0.75,
       overflow: 'hidden',
       borderWidth: 3,
       borderColor: '#333',
