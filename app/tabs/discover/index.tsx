@@ -2,10 +2,9 @@ import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import VenueCard from '../../../src/components/VenueCard';
-import  {Venue}  from '../../../src/components/VenueCard';
+import { Venue } from '../../../src/components/VenueCard';
 import styles from './styles';
 
-// Sample data - replace with real data later
 const VENUES: Venue[] = [
   {
     id: '1',
@@ -38,8 +37,6 @@ const VENUES: Venue[] = [
 
 export default function DiscoverScreen() {
   const [venues, setVenues] = useState<Venue[]>(VENUES);
-  
-  // Define swiperRef with the proper type argument
   const swiperRef = useRef<Swiper<Venue> | null>(null);
 
   const handleSwipedRight = (index: number) => {
@@ -53,9 +50,20 @@ export default function DiscoverScreen() {
   };
 
   const handleSwipedAll = () => {
-    // Reset the deck when all cards are swiped
     setVenues([...VENUES]);
-    swiperRef.current?.jumpToCardIndex(0); // Now this should work
+    swiperRef.current?.jumpToCardIndex(0);
+  };
+
+  const handleLike = () => {
+    swiperRef.current?.swipeRight();
+  };
+
+  const handleDislike = () => {
+    swiperRef.current?.swipeLeft();
+  };
+
+  const handleRewind = () => {
+    swiperRef.current?.swipeBack();
   };
 
   return (
@@ -63,20 +71,29 @@ export default function DiscoverScreen() {
       <Swiper
         ref={swiperRef}
         cards={venues}
-        renderCard={(venue) => venue && <VenueCard venue={venue} />}
+        renderCard={(venue) => 
+          venue && (
+            <VenueCard 
+              venue={venue}
+              onLike={handleLike}
+              onDislike={handleDislike}
+              onRewind={handleRewind}
+            />
+          )
+        }
         onSwipedRight={handleSwipedRight}
         onSwipedLeft={handleSwipedLeft}
         onSwipedAll={handleSwipedAll}
         infinite
         backgroundColor={'transparent'}
-        cardHorizontalMargin={10}  // Add some horizontal margin
-        stackSize={3}              // Adjust stack size if needed
-        stackScale={10}            // Adjust scaling of stacked cards
-        stackSeparation={14}       // Adjust the separation between stacked cards
+        cardHorizontalMargin={10}
+        stackSize={3}
+        stackScale={10}
+        stackSeparation={14}
         animateOverlayLabelsOpacity
         animateCardOpacity
         swipeBackCard
-        containerStyle={styles.swiper} // Use containerStyle instead of contentContainerStyle
+        containerStyle={styles.swiper}
       />
     </View>
   );

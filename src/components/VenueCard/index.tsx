@@ -1,9 +1,6 @@
-// components/VenueCard/index.tsx
 import React from 'react';
-import { View, Text, Image, Dimensions } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { X, RotateCw, Heart } from 'lucide-react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Button from '../Button';
 import styles from './styles';
 
@@ -20,12 +17,17 @@ export interface Venue {
 
 interface VenueCardProps {
   venue: Venue;
-  onLike?: () => void;
-  onDislike?: () => void;
-  onReview?: () => void;
+  onLike: () => void;
+  onDislike: () => void;
+  onRewind: () => void;
 }
 
-export default function VenueCard({ venue, onLike, onDislike, onReview }: VenueCardProps) {
+export default function VenueCard({ 
+  venue, 
+  onLike, 
+  onDislike, 
+  onRewind 
+}: VenueCardProps) {
   return (
     <View style={styles.card}>
       {/* Venue Image */}
@@ -42,14 +44,14 @@ export default function VenueCard({ venue, onLike, onDislike, onReview }: VenueC
         
         {/* Tags Section */}
         {Array.isArray(venue.tags) && venue.tags.length > 0 && (
-  <View style={styles.tagsContainer}>
-    {venue.tags.map((tag) => (
-      <View style={styles.tag} key={tag}>  {/* Key applied here for React */}
-        <Text style={styles.tagText}>{tag}</Text>
-      </View>
-    ))}
-  </View>
-)}
+          <View style={styles.tagsContainer}>
+            {venue.tags.map((tag) => (
+              <View style={styles.tag} key={tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <Text style={styles.type}>{venue.type}</Text>
         <Text style={styles.description}>{venue.description}</Text>
@@ -71,7 +73,7 @@ export default function VenueCard({ venue, onLike, onDislike, onReview }: VenueC
             icon={<X size={24} color="#DC3545" />}
           />
           <Button
-            onPress={onReview}
+            onPress={onRewind}
             variant="secondary"
             size="medium"
             icon={<RotateCw size={24} color="#6C757D" />}
