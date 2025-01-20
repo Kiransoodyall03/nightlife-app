@@ -45,6 +45,7 @@
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.4.2",
+    "prisma": "^6.1.0",
     "typescript": "^5.7.2"
   },
   "private": true
