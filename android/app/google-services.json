@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "461689495108",
+    "project_id": "nightlife-app-c4311",
+    "storage_bucket": "nightlife-app-c4311.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:461689495108:android:a99f2af7120f9621746611",
+        "android_client_info": {
+          "package_name": "com.KiranAman.nightlifeapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdNMppJlGTJt9eJZDE_yG-ZJuyFcmjJTU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

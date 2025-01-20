@@ -1,4 +1,4 @@
-package com.anonymous.nightlifeapp
+package com.KiranAman.nightlifeapp
 
 import android.os.Build
 import android.os.Bundle

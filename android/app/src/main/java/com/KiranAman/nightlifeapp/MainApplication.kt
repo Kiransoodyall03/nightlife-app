@@ -1,4 +1,4 @@
-package com.anonymous.nightlifeapp
+package com.KiranAman.nightlifeapp
 
 import android.app.Application
 import android.content.res.Configuration
