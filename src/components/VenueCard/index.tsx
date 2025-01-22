@@ -22,68 +22,31 @@ interface VenueCardProps {
   onRewind: () => void;
 }
 
-export default function VenueCard({ 
-  venue, 
-  onLike, 
-  onDislike, 
-  onRewind 
-}: VenueCardProps) {
+export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueCardProps) {
   return (
     <View style={styles.card}>
-      {/* Venue Image */}
-      <Image
-        source={{ uri: venue.image }}
-        style={styles.image}
-        resizeMode="cover"
-        onError={(e) => console.log('Image Load Error:', e.nativeEvent.error)}
-      />
-
-      {/* Venue Information */}
+      <Image source={{ uri: venue.image }} style={styles.image} resizeMode="cover" />
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{venue.name}</Text>
-        
-        {/* Tags Section */}
-        {Array.isArray(venue.tags) && venue.tags.length > 0 && (
+        {venue.tags && venue.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {venue.tags.map((tag) => (
-              <View style={styles.tag} key={tag}>
+              <View key={tag} style={styles.tag}>
                 <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
           </View>
         )}
-
         <Text style={styles.type}>{venue.type}</Text>
         <Text style={styles.description}>{venue.description}</Text>
-
-        {/* Rating and Distance */}
         <View style={styles.footer}>
           <Text style={styles.rating}>★ {venue.rating.toFixed(1)}</Text>
-          {venue.distance && (
-            <Text style={styles.distance}>{venue.distance}</Text>
-          )}
+          {venue.distance && <Text style={styles.distance}>{venue.distance}</Text>}
         </View>
-
-        {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <Button
-            onPress={onDislike}
-            variant="danger"
-            size="medium"
-            icon={<X size={24} color="#DC3545" />}
-          />
-          <Button
-            onPress={onRewind}
-            variant="secondary"
-            size="medium"
-            icon={<RotateCw size={24} color="#6C757D" />}
-          />
-          <Button
-            onPress={onLike}
-            variant="primary"
-            size="medium"
-            icon={<Heart size={24} color="#007AFF" />}
-          />
+          <Button onPress={onDislike} variant="danger" size="medium" icon={<X size={24} />} />
+          <Button onPress={onRewind} variant="secondary" size="medium" icon={<RotateCw size={24} />} />
+          <Button onPress={onLike} variant="primary" size="medium" icon={<Heart size={24} />} />
         </View>
       </View>
     </View>

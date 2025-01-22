@@ -67,7 +67,7 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.cardsContainer}>
       <Swiper
         ref={swiperRef}
         cards={venues}
@@ -86,7 +86,6 @@ export default function DiscoverScreen() {
         onSwipedAll={handleSwipedAll}
         infinite
         backgroundColor={'transparent'}
-        cardHorizontalMargin={10}
         stackSize={3}
         stackScale={10}
         stackSeparation={14}
