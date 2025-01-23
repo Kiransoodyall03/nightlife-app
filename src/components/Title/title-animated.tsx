@@ -5,7 +5,7 @@ interface TitleComponentProps {
   text: string;
 }
 const { width, height } = Dimensions.get('window');
-var paddingVertical = height * 0.175;
+var paddingVertical = height * 0.025;
 
 const TitleComponent: React.FC<TitleComponentProps> = ({ text }) => {
   const calculateColor = (index: number, totalLength: number): string => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ImageBackground } from 'react-native';
 import { styles } from './styles';
+import TitleComponent from '../../../src/components/Title/title-animated';
 
 const LoginScreen = () => {
   return (
@@ -10,10 +11,13 @@ const LoginScreen = () => {
     >
       <View style={styles.container}>
         {/* Title */}
-        <Text style={styles.title}>
-          Night
-          <Text style={styles.titleHighlight}>Life</Text>
-        </Text>
+        <View style={styles.headerTitleContainer}>
+          <Image
+            source={require('@assets/icons/discover-icon.png')}
+            style={styles.headerIcon}
+          />
+          <TitleComponent text="NightLife" />
+        </View>
 
         {/* Buttons */}
         <TouchableOpacity style={styles.button}>
@@ -53,12 +57,6 @@ const LoginScreen = () => {
             <Text style={styles.signInText}>Sign-in</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Logo */}
-        <Image
-          source={require('@assets/icons/discover-icon.png')}
-          style={styles.logo}
-        />
       </View>
     </ImageBackground>
   );
