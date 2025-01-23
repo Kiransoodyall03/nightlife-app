@@ -1,21 +1,25 @@
-// App.tsx
 import { Text, View, Image, TouchableOpacity } from 'react-native';
 import React, { useEffect } from 'react';
 import 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/drawer';
+import { createStackNavigator } from '@react-navigation/stack'; // Add this for stack navigation
 import { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import DiscoverScreen from '../app/tabs/discover';
 import GroupScreen from '../app/tabs/group';
 import ProfileScreen from '../app/tabs/profile';
+import LoginScreen from '../app/tabs/login'; // Your Login Screen Component
 import { SidebarNavigation } from 'src/components/SideBar-Nav';
 import TitleComponent from '../src/components/Title/title-animated';
 import { testFirebaseConnection } from '../firebase/config';
+import {useFonts} from 'expo-font';
 import { styles, DRAWER_WIDTH, tabBarStyle, headerStyle } from './style';
 import { setLogLevel } from "firebase/firestore";
 setLogLevel("debug");
+
+// Navigation types
 type TabParamList = {
   Discover: undefined;
   'My Group': undefined;
@@ -26,6 +30,11 @@ type DrawerParamList = {
   MainTabs: undefined;
 };
 
+type StackParamList = {
+  Login: undefined; // Login screen
+  DrawerNavigator: undefined; // Drawer navigator
+};
+
 type NavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList>,
   DrawerNavigationProp<DrawerParamList>
@@ -33,7 +42,7 @@ type NavigationProp = CompositeNavigationProp<
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
-
+const Stack = createStackNavigator<StackParamList>();
 
 function TabNavigator() {
   useEffect(() => {
@@ -49,6 +58,7 @@ function TabNavigator() {
         console.error('Error during connection test:', error);
       });
   }, []);
+
   return (
     <Tab.Navigator
       screenOptions={({ navigation, route }) => ({
@@ -62,7 +72,7 @@ function TabNavigator() {
             style={styles.menuButton}
           >
             <Image
-              source={require('@assets/icons/menu-icon.png')}
+              source={require('../assets/icons/menu-icon.png')}
               style={styles.menuIcon}
             />
           </TouchableOpacity>
@@ -126,33 +136,44 @@ function TabNavigator() {
   );
 }
 
-export default function App() {
+function DrawerNavigator() {
   const handleLogout = () => {
-    // Implement your logout logic here
     console.log('Logging out...');
   };
 
   return (
-    <NavigationContainer>
-      <Drawer.Navigator
-        drawerContent={(props) => (
-          <SidebarNavigation
-            {...props}
-            onLogout={handleLogout}
-          />
-        )}
-        screenOptions={{
-          drawerStyle: {
-            width: DRAWER_WIDTH,
-          },
-          headerShown: false,
-        }}
-      >
-        <Drawer.Screen 
-          name="MainTabs" 
-          component={TabNavigator}
+    <Drawer.Navigator
+      drawerContent={(props) => (
+        <SidebarNavigation
+          {...props}
+          onLogout={handleLogout}
         />
-      </Drawer.Navigator>
+      )}
+      screenOptions={{
+        drawerStyle: {
+          width: DRAWER_WIDTH,
+        },
+        headerShown: false,
+      }}
+    >
+      <Drawer.Screen name="MainTabs" component={TabNavigator} />
+    </Drawer.Navigator>
+  );
+}
+
+export default function App() {
+  const [fontsLoaded] = useFonts({
+    'Jaldi-Regular': require('../assets/fonts/Jaldi-Regular.ttf'),
+    'Jaldi-Bold': require('../assets/fonts/Jaldi-Bold.ttf'),
+  });
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+        {/* Login Screen */}
+        <Stack.Screen name="Login" component={LoginScreen} />
+        {/* Main App */}
+        <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

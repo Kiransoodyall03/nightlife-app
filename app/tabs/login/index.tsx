@@ -1,13 +1,12 @@
 import React from 'react';
-import {View,Text,TextInput,TouchableOpacity,Image,StyleSheet,ImageBackground,} from 'react-native';
-import {styles} from './styles';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ImageBackground } from 'react-native';
+import { styles } from './styles';
 
 const LoginScreen = () => {
   return (
     <ImageBackground
-      source={{ uri: 'https://via.placeholder.com/800' }} // Replace with your actual background image URL
+      source={require('@assets/icons/login-background.png')} // Replace with your actual background image URL
       style={styles.backgroundImage}
-      imageStyle={{ opacity: 0.25 }} // Apply blur effect
     >
       <View style={styles.container}>
         {/* Title */}

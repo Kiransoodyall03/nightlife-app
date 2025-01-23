@@ -1,3 +1,4 @@
+// filepath: /c:/Users/User/Desktop/nightlife-app/nightlife-app/app/tabs/login/styles.ts
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -7,6 +8,8 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
   container: {
     width: width * 0.9,
@@ -17,7 +20,7 @@ export const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Jaldi',
+    fontFamily: 'Jaldi-Regular', // Use the font family name
     color: '#000000',
   },
   titleHighlight: {
@@ -36,7 +39,7 @@ export const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
-    fontFamily: 'Jaldi',
+    fontFamily: 'Jaldi-Regular', // Use the font family name
     color: '#000',
   },
   input: {
@@ -44,6 +47,7 @@ export const styles = StyleSheet.create({
     width: '100%',
     height: 50,
     borderRadius: 25,
+    fontFamily: 'Jaldi-Regular', 
     paddingHorizontal: 20,
     marginVertical: 10,
     fontSize: 16,
@@ -57,21 +61,24 @@ export const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     color: '#FFFFFF',
+    fontFamily: 'Jaldi-Regular', 
     fontSize: 14,
   },
   signInButton: {
     backgroundColor: '#026495',
+    fontFamily: 'Jaldi-Regular', 
     paddingVertical: 5,
     paddingHorizontal: 20,
     borderRadius: 5,
   },
   signInText: {
+    fontFamily: 'Jaldi-Regular', 
     color: '#FFFFFF',
     fontSize: 14,
     textAlign: 'center',
   },
   logo: {
-    width: 50,
+    width: 70,
     height: 50,
     marginTop: 20,
   },
