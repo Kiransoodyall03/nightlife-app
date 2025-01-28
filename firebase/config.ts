@@ -1,5 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {getAuth} from 'firebase/auth';
 
 // Firebase Config
 const firebaseConfig = {
@@ -13,19 +14,18 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore();
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
+// Test Firebase Connection
 export const testFirebaseConnection = async (): Promise<boolean> => {
   try {
-    if (db) {
-      console.log('Firebase connection successful.');
-      return true;
-    } else {
-      console.error('Firebase connection failed.');
-      return false;
-    }
+    const testDoc = doc(db, "_test", "_connection");
+    await getDoc(testDoc); // Try to fetch a non-existent document
+    console.log("Firebase connection successful.");
+    return true;
   } catch (error) {
-    console.error('Error testing Firebase connection:', error);
-    throw error;
+    console.error("Error testing Firebase connection:", error);
+    return false;
   }
 };
