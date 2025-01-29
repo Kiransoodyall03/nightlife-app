@@ -24,8 +24,6 @@ const styles = StyleSheet.create({
     flex: 1, // Take up remaining space
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2, // Debugging border
-    borderColor: 'blue', // Debugging color
   },
   navbar: {
     height: TopHeading, // Navbar height
@@ -42,8 +40,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2, // Debugging border
-    borderColor: 'red', // Debugging color
   },
 });
 

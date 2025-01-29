@@ -12,8 +12,6 @@ export default StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center', // Centers content vertically inside the card
     alignItems: 'center', // Centers content horizontally inside the card
-    borderWidth: 2, // Debugging border
-    borderColor: 'blue', // Debugging color
     marginBottom: 100
   },
   image: {

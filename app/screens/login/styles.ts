@@ -88,4 +88,11 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
   },
+  errorText: {
+    color: '#ff0000',
+    fontSize: 14,
+    marginVertical: 10,
+    textAlign: 'center',
+    fontFamily: 'Jaldi-Regular',
+  },
 });

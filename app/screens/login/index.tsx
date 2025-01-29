@@ -1,24 +1,34 @@
-import React, { useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ImageBackground, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { styles } from './styles';
 import TitleComponent from '../../../src/components/Title/title-animated';
-import { testFirebaseConnection } from 'firebase/config';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../../src/services/auth/useAuth'; // Update path accordingly
+import { validateEmail } from '../../../src/services/auth/validation'; // Update path accordingly
+import { LoginScreenNavigationProp } from '../../../types/navigation'; // Update path
 
 const LoginScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<LoginScreenNavigationProp>();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { performLogin, loading, error } = useAuth();
+  const handleSubmit = async () => {
+    if (!validateEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
 
-  useEffect(() => {
-    const checkConnection = async () => {
-      const isConnected = await testFirebaseConnection();
-      if (isConnected) {
-        console.log("Firebase connection successful!");
-      } else {
-        console.log("Firebase connection failed.");
-      }
-    };
-    checkConnection();
-  }, []);
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    const result = await performLogin(email, password);
+    
+    if (result.success) {
+      navigation.navigate('DrawerNavigator');
+    }
+  };
 
   return (
     <ImageBackground
@@ -32,8 +42,7 @@ const LoginScreen = () => {
           <TitleComponent text="NightLife" />
         </View>
 
-        {/* Social Login Buttons */}
-
+        {/* Social Login Buttons (Placeholder) */}
         <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFFFFF' }]}>
           <Image
             source={require('@assets/icons/apple-icon.png')}
@@ -60,29 +69,45 @@ const LoginScreen = () => {
         {/* Input Fields */}
         <TextInput 
           style={styles.input} 
-          placeholder="Enter Your Email/Username" 
+          placeholder="Enter Your Email" 
           placeholderTextColor="#C4C4C4"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
         />
         <TextInput
           style={styles.input}
           placeholder="Enter Your Password"
           placeholderTextColor="#C4C4C4"
           secureTextEntry
+          value={password}
+          onChangeText={setPassword}
         />
 
-        {/* Action Buttons */}
-        
-        <TouchableOpacity style={styles.loginButton}>
-          <Text style={styles.loginButtonText}>Log-in</Text>
+        {/* Error Message */}
+        {error && <Text style={styles.errorText}>{error}</Text>}
+
+        {/* Login Button */}
+        <TouchableOpacity 
+          style={styles.loginButton}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.loginButtonText}>Log-in</Text>
+          )}
         </TouchableOpacity>
 
+        {/* Sign Up Navigation */}
         <TouchableOpacity 
           style={styles.signUpButton}
-          onPress={() => navigation.navigate('SignUp' as never)}
+          onPress={() => navigation.navigate('Register')}
         >
           <Text style={styles.signUpButtonText}>Sign-up</Text>
         </TouchableOpacity>
-
       </View>
     </ImageBackground>
   );

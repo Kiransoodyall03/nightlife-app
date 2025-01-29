@@ -1,84 +1,102 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { styles } from './styles';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import TitleComponent from 'src/components/Title/title-animated';
+import { useAuth } from '../../../src/services/auth/useAuth';
+import { validateEmail, validatePassword, validateUsername } from '../../../src/services/auth/validation';
+import TitleComponent from '../../../src/components/Title/title-animated';
 
-const SignUpScreen = () => {
+import { NavigationProp } from '@react-navigation/native';
+
+const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { handleRegister, loading, error } = useAuth();
 
-  const handleSignUp = async () => {
-    setErrorMessage('');
-    
-    if (!username || !email || !password || !confirmPassword) {
-      setErrorMessage('All fields are required');
+  const handleSubmit = async () => {
+    if (!validateUsername(username)) {
+      Alert.alert('Error', 'Username must be at least 3 characters');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match');
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    try {
-      const auth = getAuth();
-      await createUserWithEmailAndPassword(auth, email, password);
-      // You can add additional user profile update here if needed
+    const result = await handleRegister({ username, email, password });
+    
+    if (result.success) {
       Alert.alert('Success', 'Account created successfully!');
-    } catch (error: any) {
-      setErrorMessage(error.message);
+      navigation.navigate('DrawerNavigator');
+    } else {
+      Alert.alert('Error', error || 'Registration failed');
     }
   };
 
   return (
     <View style={styles.container}>
-        <View style={styles.titleContainer}>
-          <TitleComponent text="NightLife" />
-        </View>
+      <TitleComponent text="NightLife" />
       
       <TextInput
         style={styles.input}
-        placeholder="Enter a Username"
+        placeholder="Username"
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
       />
-      
+
       <TextInput
         style={styles.input}
-        placeholder="Enter Your Email"
+        placeholder="Email"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      
+
       <TextInput
         style={styles.input}
-        placeholder="Enter Your Password"
+        placeholder="Password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
-      
+
       <TextInput
         style={styles.input}
-        placeholder="Confirm Your Password"
+        placeholder="Confirm Password"
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry
       />
 
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+      {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-        <Text style={styles.buttonText}>Sign-up</Text>
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={handleSubmit}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Register</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
 };
-export default SignUpScreen;
+
+export default RegisterScreen;

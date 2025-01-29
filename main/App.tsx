@@ -14,16 +14,14 @@ import LoginScreen from '../app/screens/login';
 import SignUpScreen from '../app/screens/register'; // Add this import
 import { SidebarNavigation } from 'src/components/SideBar-Nav';
 import TitleComponent from '../src/components/Title/title-animated';
-import { testFirebaseConnection } from '../firebase/config';
 import { useFonts } from 'expo-font';
-import { styles, DRAWER_WIDTH, tabBarStyle, headerStyle } from './style';
+import { styles, DRAWER_WIDTH} from './style';
 import { setLogLevel } from "firebase/firestore";
 setLogLevel("debug");
 
-// Update StackParamList to include SignUp
 type StackParamList = {
   Login: undefined;
-  SignUp: undefined; // Add SignUp route
+  Register: undefined; // Add SignUp route
   DrawerNavigator: undefined;
 };
 
@@ -77,11 +75,9 @@ function TabNavigator() {
             <TitleComponent text="NightLife" />
           </View>
         ),
-        tabBarStyle: tabBarStyle,
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#8E8E93',
         tabBarLabel: () => null,
-        headerStyle: headerStyle,
       })}
     >
       <Tab.Screen
@@ -167,7 +163,7 @@ export default function App() {
       >
         {/* Auth Screens */}
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="Register" component={SignUpScreen} />
         
         {/* Main App */}
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
