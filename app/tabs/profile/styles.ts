@@ -18,6 +18,32 @@ export default StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  profileImagePlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  profileInitial: {
+    fontSize: 40,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  recalibrateButton: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  recalibrateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+  },
   profileImage: {
     width: 100,
     height: 100,

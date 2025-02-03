@@ -16,6 +16,7 @@ import TitleComponent from '../src/components/Title-Dark/title-animated';
 import { useFonts } from 'expo-font';
 import { styles, DRAWER_WIDTH} from './style';
 import { setLogLevel } from "firebase/firestore";
+import { UserProvider } from '../src/context/UserContext';
 setLogLevel("debug");
 
 type StackParamList = {
@@ -149,6 +150,7 @@ export default function App() {
   });
 
   return (
+    <UserProvider>
     <NavigationContainer>
       <Stack.Navigator 
         initialRouteName="Login" 
@@ -162,5 +164,6 @@ export default function App() {
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
+    </UserProvider>
   );
 }

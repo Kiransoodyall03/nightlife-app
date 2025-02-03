@@ -1,37 +1,71 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import styles from './styles';
+import { useUser } from '../../../src/context/UserContext';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 
-const Profile = () => {
+const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
+  const { user, userData, signOut, updateLocation } = useUser();
+
+  const handleSignOut = async () => {
+    try{
+      await signOut();
+      navigation.navigate('Login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
   return (
     <View style={styles.container}>
       {/* Background Header */}
       <Image 
-        source={require('../../../assets/background-art/blue-background.jpg')} // Replace with your image
+        source={require('../../../assets/background-art/blue-background.jpg')}
         style={styles.backgroundHeader}
       />
 
       {/* Profile Image Container */}
       <View style={styles.profileImageContainer}>
-        <Image
-          source={require('../../../assets/icons/profile_logo.png')} // Replace with user image
-          style={styles.profileImage}
-        />
+        {user?.photoURL ? (
+          <Image
+            source={{ uri: user.photoURL }}
+            style={styles.profileImage}
+          />
+        ) : (
+          <View style={styles.profileImagePlaceholder}>
+            <Text style={styles.profileInitial}>
+              {userData?.username?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Profile Information Section */}
       <View style={styles.profileSection}>
-        <Text style={styles.name}>Kiran</Text>
-        <Text style={styles.email}>kiransoodyall03@gmail.com</Text>
+        <Text style={styles.name}>{userData?.username || 'User'}</Text>
+        <Text style={styles.email}>{userData?.email || ''}</Text>
       </View>
 
       {/* Account Settings Section */}
       <View style={styles.settingsSection}>
         <View style={styles.settingItem}>
-          <Text style={styles.settingText}>Location: Johannesburg, South Africa</Text>
+          <Text style={styles.settingText}>
+            {userData?.location?.address || 'Location not available'}
+          </Text>
+          <TouchableOpacity
+            style={styles.recalibrateButton}
+            onPress={updateLocation}
+          >
+            <Text style={styles.recalibrateButtonText}>
+              {userData?.location?.address ? 
+                'Update Location' : 
+                'Enable Location'}
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.settingItem}>
-          <Text style={styles.settingText}>Search Area: 5km</Text>
+          <Text style={styles.settingText}>
+            Search Area: {userData?.searchRadius ? `${userData.searchRadius}km` : 'Not set'}
+          </Text>
         </View>
         <TouchableOpacity style={styles.settingItem}>
           <Text style={styles.settingText}>Password</Text>
@@ -40,7 +74,7 @@ const Profile = () => {
 
       {/* Action Buttons Section */}
       <View style={styles.actionsSection}>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleSignOut}>
           <Text style={styles.buttonText}>Log-out</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
