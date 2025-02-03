@@ -1,4 +1,6 @@
 // src/services/auth/types.ts
+import { GeoPoint } from 'firebase/firestore';
+
 export interface FirebaseAuthError extends Error {
     code: string;
     message: string;
@@ -7,14 +9,21 @@ export interface FirebaseAuthError extends Error {
   export type AuthResult<T = any> = {
     success: boolean;
     user?: T;
-    error?: FirebaseAuthError;
+    error?: Error;
   };
   
-  export type AuthUser = {
+
+  export interface AuthUser {
+    username: string;
     email: string;
     password: string;
-    username: string;
-  };
+    location: {
+      address: string;
+      latitude: number;
+      longitude: number;
+    };
+  }
+  
 
   export interface LocationData {
     latitude: number;

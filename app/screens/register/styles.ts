@@ -49,6 +49,25 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  locationContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 5,
+  },
+  locationErrorText: {
+    fontSize: 14,
+    color: '#F44336',
+    marginTop: 5,
+  },
+  refreshLocationText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 5,
+  },
   errorText: {
     color: '#ff4444',
     marginBottom: 10,

@@ -4,7 +4,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import * as Location from 'expo-location'; // For location tracking
 import { auth, db } from '../firebase/config';
 import { AuthResult, FirebaseAuthError, AuthUser } from './types';
-
+import { GeoPoint } from 'firebase/firestore';
 // Helper function to fetch user location
 const fetchLocation = async () => {
   try {
@@ -32,40 +32,39 @@ const fetchLocation = async () => {
     throw error;
   }
 };
-
 export const handleRegistration = async (
   userData: AuthUser
 ): Promise<AuthResult> => {
   try {
-    // Step 1: Fetch user location
-    const location = await fetchLocation();
+    // Validate coordinates first
+    if (typeof userData.location.latitude !== 'number' || 
+        typeof userData.location.longitude !== 'number') {
+      throw new Error('Invalid coordinates');
+    }
 
-    // Step 2: Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       userData.email,
       userData.password
     );
 
-// In your register.ts
-await setDoc(doc(db, "users", userCredential.user.uid), {
-  username: userData.username, // Match Firestore field name
-  email: userData.email,
-  location: location,
-  searchRadius: 5,
-  uid: userCredential.user.uid,
-  createdAt: new Date(),
-});
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+      username: userData.username,
+      email: userData.email,
+      location: {
+        address: userData.location.address,
+        coordinates: new GeoPoint(
+          userData.location.latitude,
+          userData.location.longitude
+        ),
+      },
+      searchRadius: 5,
+      createdAt: new Date(),
+    });
 
-    return {
-      success: true,
-      user: userCredential.user,
-    };
+    return { success: true, user: userCredential.user };
   } catch (error) {
-    const firebaseError = error as FirebaseAuthError;
-    return {
-      success: false,
-      error: firebaseError,
-    };
+    console.error('Registration error:', error);
+    return { success: false, error: error as Error };
   }
 };
