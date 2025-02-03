@@ -9,8 +9,8 @@ var paddingVertical = height * 0.025;
 
 const TitleComponent: React.FC<TitleComponentProps> = ({ text }) => {
   const calculateColor = (index: number, totalLength: number): string => {
-    const startColor = [0, 0, 0]; // Black (#000000)
-    const endColor = [0, 122, 255]; // Blue (#007AFF)
+    const startColor = [255, 255, 255]; // White
+    const endColor = [0, 122, 255]; // Blue
 
     const r = Math.round(startColor[0] + ((endColor[0] - startColor[0]) * index) / (totalLength - 1));
     const g = Math.round(startColor[1] + ((endColor[1] - startColor[1]) * index) / (totalLength - 1));

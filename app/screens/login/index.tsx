@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { styles } from './styles';
-import TitleComponent from '../../../src/components/Title/title-animated';
+import TitleComponent from '../../../src/components/Title-Light/title-animated';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../src/services/auth/useAuth'; // Update path accordingly
 import { validateEmail } from '../../../src/services/auth/validation'; // Update path accordingly

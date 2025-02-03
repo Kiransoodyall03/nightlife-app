@@ -2,7 +2,6 @@ import React, { useState, useRef, forwardRef } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { DrawerLayoutAndroid } from 'react-native'; // Import DrawerLayoutAndroid
 import { FontAwesome } from '@expo/vector-icons'; // If using FontAwesome icons
-import { SidebarNavigation } from '../../src/components/SideBar-Nav'; // Your custom sidebar component
 import { Tabs } from 'expo-router'; // If using expo-router for navigation
 export default function TabLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -13,20 +12,7 @@ export default function TabLayout() {
     console.log('Logging out...');
   };``
 
-  const renderSidebar = () => (
-    <SidebarNavigation
-      profileImage="https://via.placeholder.com/150"
-      onLogout={handleLogout}
-    />
-  );
-
   return (
-    <DrawerLayoutAndroid
-      ref={drawerRef}
-      drawerWidth={300}
-      drawerPosition="left"
-      renderNavigationView={renderSidebar}
-    >
       <Tabs
         screenOptions={{
           headerShown: true,
@@ -104,7 +90,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </DrawerLayoutAndroid>
   );
 }
 

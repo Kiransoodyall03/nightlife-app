@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } fro
 import { styles } from './styles';
 import { useAuth } from '../../../src/services/auth/useAuth';
 import { validateEmail, validatePassword, validateUsername } from '../../../src/services/auth/validation';
-import TitleComponent from '../../../src/components/Title/title-animated';
+import TitleComponent from '../../../src/components/Title-Dark/title-animated';
 
 import { NavigationProp } from '@react-navigation/native';
 

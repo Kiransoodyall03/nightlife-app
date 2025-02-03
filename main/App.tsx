@@ -12,8 +12,7 @@ import GroupScreen from '../app/tabs/group';
 import ProfileScreen from '../app/tabs/profile';
 import LoginScreen from '../app/screens/login';
 import SignUpScreen from '../app/screens/register'; // Add this import
-import { SidebarNavigation } from 'src/components/SideBar-Nav';
-import TitleComponent from '../src/components/Title/title-animated';
+import TitleComponent from '../src/components/Title-Dark/title-animated';
 import { useFonts } from 'expo-font';
 import { styles, DRAWER_WIDTH} from './style';
 import { setLogLevel } from "firebase/firestore";
@@ -130,12 +129,6 @@ function DrawerNavigator() {
 
   return (
     <Drawer.Navigator
-      drawerContent={(props) => (
-        <SidebarNavigation
-          {...props}
-          onLogout={handleLogout}
-        />
-      )}
       screenOptions={{
         drawerStyle: {
           width: DRAWER_WIDTH,
