@@ -32,15 +32,18 @@ type UserContextType = {
   signOut: () => Promise<void>;
   updateLocation: () => Promise<void>;
   pickImage: () => Promise<string | undefined>;
+  updateUsername: (newUsername: string) => Promise<void>;
+  updateSearchRadius: (newRadius: number) => Promise<void>;
 };
-
 const UserContext = createContext<UserContextType>({
   user: null,
   userData: null,
   loading: true,
   signOut: async () => {},
   updateLocation: async () => {},
-  pickImage: async () => undefined
+  pickImage: async () => undefined,
+  updateUsername: async () => {},
+  updateSearchRadius: async () => {},
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -80,6 +83,55 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     }
   };
+  const updateUsername = async (newUsername: string) => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      await updateDoc(doc(db, 'users', user.uid), {
+        username: newUsername,
+      });
+
+      setUserData(prev => ({
+        ...prev!,
+        username: newUsername,
+      }));
+
+      alert('Username updated successfully!');
+    } catch (error) {
+      console.error('Username update error:', error);
+      alert('Failed to update username');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to update search radius
+  const updateSearchRadius = async (newRadius: number) => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      await updateDoc(doc(db, 'users', user.uid), {
+        searchRadius: newRadius,
+      });
+
+      setUserData(prev => ({
+        ...prev!,
+        searchRadius: newRadius,
+      }));
+
+      alert('Search radius updated successfully!');
+    } catch (error) {
+      console.error('Search radius update error:', error);
+      alert('Failed to update search radius');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const pickImage = async () => {
     try {
@@ -224,7 +276,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, userData, loading, signOut, updateLocation, pickImage }}>
+    <UserContext.Provider value={{ user, userData, loading, signOut, updateLocation, pickImage, updateUsername,
+      updateSearchRadius}}>
       {children}
     </UserContext.Provider>
   );

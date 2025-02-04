@@ -19,6 +19,18 @@ export default StyleSheet.create({
     borderRadius: 100,
     marginBottom: 8,
   },
+  inlineEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editInput: {
+    flex: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: '#007AFF',
+    paddingVertical: 4,
+    fontFamily: 'Jaldi-Regular',
+  },
   profileImagePlaceholder: {
     width: 125,
     height: 125,
@@ -42,6 +54,7 @@ export default StyleSheet.create({
   recalibrateButtonText: {
     color: '#fff',
     fontSize: 14,
+    fontFamily: 'Jaldi-Regular',
   },
   profileImage: {
     width: 125,
@@ -52,20 +65,59 @@ export default StyleSheet.create({
     marginTop: 8,
     color: '#007AFF',
     textAlign: 'center',
+    fontFamily: 'Jaldi-Regular',
   },
   profileSection: {
     alignItems: 'center',
     marginBottom: 32,
     paddingTop: 30, // Space for profile image
   },
+  section: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    fontFamily: 'Jaldi-Regular',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 12,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Jaldi-Regular',
+  },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
+    fontFamily: 'Jaldi-Regular',
   },
   email: {
     fontSize: 16,
     color: '#666',
+    fontFamily: 'Jaldi-Regular',
   },
   settingsSection: {
     borderTopWidth: 1,
@@ -81,6 +133,7 @@ export default StyleSheet.create({
   settingText: {
     fontSize: 16,
     color: '#333',
+    fontFamily: 'Jaldi-Regular',
   },
   actionsSection: {
     marginTop: 24,
@@ -90,12 +143,8 @@ export default StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 16,
   },
-  buttonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    textAlign: 'center',
-  },
   deleteText: {
     color: '#FF3B30',
+    fontFamily: 'Jaldi-Regular',
   },
 });

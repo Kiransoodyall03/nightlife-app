@@ -1,29 +1,45 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput } from 'react-native';
 import styles from './styles';
 import { useUser } from '../../../src/context/UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 
 const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
-  const { user, userData, signOut, updateLocation, pickImage } = useUser();
+  const { user, userData, signOut, updateLocation, pickImage, updateSearchRadius, updateUsername } = useUser();
+  const [newUsername, setNewUsername] = useState(userData?.username || '');
+  const [newSearchRadius, setNewSearchRadius] = useState(userData?.searchRadius?.toString() || '5');
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [editingRadius, setEditingRadius] = useState(false);
 
   const handleSignOut = async () => {
-    try{
+    try {
       await signOut();
       navigation.navigate('Login');
     } catch (error) {
       console.error('Sign out error:', error);
     }
   };
-  
-  const handleImageUpload = async () => {
-    try {
-      await pickImage();
-      alert('Profile picture updated!');
-    } catch (error) {
-      alert('Failed to upload image');
+
+  const handleUpdateUsername = async () => {
+    if (newUsername.trim() === '') {
+      alert('Username cannot be empty');
+      return;
     }
+    await updateUsername(newUsername);
+    setEditingUsername(false);
   };
+
+  const handleUpdateSearchRadius = async () => {
+    const radius = parseInt(newSearchRadius);
+    if (isNaN(radius) || radius < 1 || radius > 100) {
+      alert('Search radius must be between 1 and 100 km');
+      return;
+    }
+    await updateSearchRadius(radius);
+    setEditingRadius(false);
+  };
+
   return (
     <View style={styles.container}>
       {/* Background Header */}
@@ -33,7 +49,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
       />
 
       {/* Profile Image Container */}
-      <TouchableOpacity onPress={handleImageUpload}>
+      <TouchableOpacity onPress={pickImage}>
         <View style={styles.profileImageContainer}>
           {userData?.profilePicture ? (
             <Image
@@ -49,9 +65,31 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
           )}
         </View>
       </TouchableOpacity>
+
       {/* Profile Information Section */}
       <View style={styles.profileSection}>
-        <Text style={styles.name}>{userData?.username || 'User'}</Text>
+        <View style={styles.inlineEditContainer}>
+          {editingUsername ? (
+            <>
+              <TextInput
+                style={styles.editInput}
+                value={newUsername}
+                onChangeText={setNewUsername}
+                autoFocus
+              />
+              <TouchableOpacity onPress={handleUpdateUsername}>
+                <Feather name="check" size={24} color="#4CAF50" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.name}>{userData?.username || 'User'}</Text>
+              <TouchableOpacity onPress={() => setEditingUsername(true)}>
+                <Feather name="edit-2" size={20} color="#666" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
         <Text style={styles.email}>{userData?.email || ''}</Text>
       </View>
 
@@ -72,14 +110,34 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
             </Text>
           </TouchableOpacity>
         </View>
+
         <View style={styles.settingItem}>
-          <Text style={styles.settingText}>
-            Search Area: {userData?.searchRadius ? `${userData.searchRadius}km` : 'Not set'}
-          </Text>
+          <View style={styles.inlineEditContainer}>
+            {editingRadius ? (
+              <>
+                <TextInput
+                  style={styles.editInput}
+                  value={newSearchRadius}
+                  onChangeText={setNewSearchRadius}
+                  keyboardType="numeric"
+                  autoFocus
+                />
+                <TouchableOpacity onPress={handleUpdateSearchRadius}>
+                  <Feather name="check" size={24} color="#4CAF50" />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.settingText}>
+                  Search Area: {userData?.searchRadius ? `${userData.searchRadius}km` : 'Not set'}
+                </Text>
+                <TouchableOpacity onPress={() => setEditingRadius(true)}>
+                  <Feather name="edit-2" size={20} color="#666" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </View>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingText}>Password</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Action Buttons Section */}
