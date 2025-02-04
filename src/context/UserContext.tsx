@@ -4,14 +4,18 @@ import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/a
 import { auth, db } from '../services/firebase/config';
 import { doc, getDoc, updateDoc, GeoPoint } from 'firebase/firestore';
 import * as Location from 'expo-location';
+import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 
 const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+const storage = getStorage();
 
 interface UserData {
   username: string;
   email: string;
+  profilePicture?: string;
   location: {
     address: string;
     coordinates: GeoPoint;
@@ -27,6 +31,7 @@ type UserContextType = {
   loading: boolean;
   signOut: () => Promise<void>;
   updateLocation: () => Promise<void>;
+  pickImage: () => Promise<string | undefined>;
 };
 
 const UserContext = createContext<UserContextType>({
@@ -35,6 +40,7 @@ const UserContext = createContext<UserContextType>({
   loading: true,
   signOut: async () => {},
   updateLocation: async () => {},
+  pickImage: async () => undefined
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -42,6 +48,81 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const uploadProfilePicture = async (uri: string) => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const storageRef = ref(storage, `profile-pictures/${user.uid}`);
+
+      await uploadBytes(storageRef, blob);
+
+      const downloadURL = await getDownloadURL(storageRef);
+
+      await updateDoc(doc(db, 'users', user.uid), {
+        profilePicture: downloadURL
+      });
+
+      setUserData(prev => ({
+        ...prev!,
+        profilePicture: downloadURL
+      }));
+
+      return downloadURL;
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      if (!user) {
+        alert('You must be logged in to upload images');
+        return;
+      }
+  
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+      });
+  
+      if (!result.canceled && result.assets[0].uri) {
+        const uri = result.assets[0].uri;
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        
+        // Use the user's UID in the storage path
+        const storageRef = ref(storage, `profile-pictures/${user.uid}`);
+        
+        await uploadBytes(storageRef, blob);
+        const downloadURL = await getDownloadURL(storageRef);
+  
+        // Update Firestore document
+        await updateDoc(doc(db, 'users', user.uid), {
+          profilePicture: downloadURL
+        });
+  
+        setUserData(prev => ({
+          ...prev!,
+          profilePicture: downloadURL
+        }));
+  
+        return downloadURL;
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      throw error;
+    }
+  };
   const fetchLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -143,7 +224,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, userData, loading, signOut, updateLocation }}>
+    <UserContext.Provider value={{ user, userData, loading, signOut, updateLocation, pickImage }}>
       {children}
     </UserContext.Provider>
   );

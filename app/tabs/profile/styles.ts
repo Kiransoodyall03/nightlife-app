@@ -16,17 +16,16 @@ export default StyleSheet.create({
   profileImageContainer: {
     marginTop: 100, // Half of background header height
     alignItems: 'center',
-    marginBottom: 16,
+    borderRadius: 100,
+    marginBottom: 8,
   },
   profileImagePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 125,
+    height: 125,
+    borderRadius: 100,
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
   },
   profileInitial: {
     fontSize: 40,
@@ -45,16 +44,19 @@ export default StyleSheet.create({
     fontSize: 14,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: '#fff',
+    width: 125,
+    height: 125,
+    borderRadius: 100,
+  },
+  uploadText: {
+    marginTop: 8,
+    color: '#007AFF',
+    textAlign: 'center',
   },
   profileSection: {
     alignItems: 'center',
     marginBottom: 32,
-    paddingTop: 50, // Space for profile image
+    paddingTop: 30, // Space for profile image
   },
   name: {
     fontSize: 24,

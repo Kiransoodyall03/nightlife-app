@@ -5,7 +5,7 @@ import { useUser } from '../../../src/context/UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 
 const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
-  const { user, userData, signOut, updateLocation } = useUser();
+  const { user, userData, signOut, updateLocation, pickImage } = useUser();
 
   const handleSignOut = async () => {
     try{
@@ -13,6 +13,15 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
       navigation.navigate('Login');
     } catch (error) {
       console.error('Sign out error:', error);
+    }
+  };
+  
+  const handleImageUpload = async () => {
+    try {
+      await pickImage();
+      alert('Profile picture updated!');
+    } catch (error) {
+      alert('Failed to upload image');
     }
   };
   return (
@@ -24,21 +33,22 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
       />
 
       {/* Profile Image Container */}
-      <View style={styles.profileImageContainer}>
-        {user?.photoURL ? (
-          <Image
-            source={{ uri: user.photoURL }}
-            style={styles.profileImage}
-          />
-        ) : (
-          <View style={styles.profileImagePlaceholder}>
-            <Text style={styles.profileInitial}>
-              {userData?.username?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
-        )}
-      </View>
-
+      <TouchableOpacity onPress={handleImageUpload}>
+        <View style={styles.profileImageContainer}>
+          {userData?.profilePicture ? (
+            <Image
+              source={{ uri: userData.profilePicture }}
+              style={styles.profileImage}
+            />
+          ) : (
+            <View style={styles.profileImagePlaceholder}>
+              <Text style={styles.profileInitial}>
+                {userData?.username?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
       {/* Profile Information Section */}
       <View style={styles.profileSection}>
         <Text style={styles.name}>{userData?.username || 'User'}</Text>
