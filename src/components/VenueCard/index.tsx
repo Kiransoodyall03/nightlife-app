@@ -40,8 +40,6 @@ export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueC
         <Text style={styles.type}>{venue.type}</Text>
         <Text style={styles.description}>{venue.description}</Text>
         <View style={styles.footer}>
-          <Text style={styles.rating}>★ {venue.rating.toFixed(1)}</Text>
-          {venue.distance && <Text style={styles.distance}>{venue.distance}</Text>}
         </View>
         <View style={styles.actionButtons}>
           <Button onPress={onDislike} variant="danger" size="medium" icon={<X size={24} />} />

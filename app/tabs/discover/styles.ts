@@ -4,12 +4,12 @@ const TopHeading = height * 0.15;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Take full screen height
-    justifyContent: 'center', // Center vertically
-    alignItems: 'center', // Center horizontally
+    flex: 1,
+    justifyContent: 'center', 
+    alignItems: 'center', 
   },
   dashboard: {
-    height: 60, // Dashboard height
+    height: 60, 
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -17,29 +17,34 @@ const styles = StyleSheet.create({
   header: {
     height: TopHeading,
     width: '90%',
-    backgroundColor: '#ddd', // Placeholder design
+    backgroundColor: '#ddd', 
     borderRadius: 10,
   },
   cardsContainer: {
-    flex: 1, // Take up remaining space
+    flex: 1, 
     justifyContent: "center",
     alignItems: "center",
   },
   navbar: {
-    height: TopHeading, // Navbar height
+    height: TopHeading,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },
   footer: {
     width: '90%',
-    backgroundColor: '#ddd', // Placeholder design
+    backgroundColor: '#ddd',
     borderRadius: 10,
   },
   swiper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
 

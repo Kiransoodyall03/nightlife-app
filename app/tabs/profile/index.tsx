@@ -13,12 +13,8 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
   const [editingRadius, setEditingRadius] = useState(false);
 
   const handleSignOut = async () => {
-    try {
       await signOut();
       navigation.navigate('Login');
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
   };
 
   const handleUpdateUsername = async () => {

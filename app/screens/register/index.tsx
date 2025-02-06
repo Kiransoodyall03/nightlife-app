@@ -103,7 +103,6 @@ const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => 
     }
 
     if (!location || !location.latitude || !location.longitude) {
-      Alert.alert('Error', 'Valid location is required');
       return;
     }  
 
@@ -120,7 +119,6 @@ const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => 
   
 
     if (result.success) {
-      Alert.alert('Success', 'Account created successfully!');
       navigation.navigate('DrawerNavigator');
     } else {
       Alert.alert('Error', error || 'Registration failed');
@@ -146,16 +144,9 @@ const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => 
         </View>
       ) : location ? (
         <View style={styles.locationContainer}>
-          <TouchableOpacity onPress={fetchLocation}>
-            <Text style={styles.refreshLocationText}>Refresh Location</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.locationContainer}>
-          <Text style={styles.locationErrorText}>Location unavailable</Text>
-          <TouchableOpacity onPress={fetchLocation}>
-            <Text style={styles.refreshLocationText}>Try Again</Text>
-          </TouchableOpacity>
         </View>
       )}
 

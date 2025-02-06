@@ -10,6 +10,7 @@ import axios from 'axios';
 
 const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+const PLACES_API = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
 const storage = getStorage();
 
 interface UserData {
@@ -18,7 +19,10 @@ interface UserData {
   profilePicture?: string;
   location: {
     address: string;
-    coordinates: GeoPoint;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
   };
   searchRadius: number;
   uid: string;
@@ -34,6 +38,8 @@ type UserContextType = {
   pickImage: () => Promise<string | undefined>;
   updateUsername: (newUsername: string) => Promise<void>;
   updateSearchRadius: (newRadius: number) => Promise<void>;
+  nearbyPlaces: any[];
+  fetchNearbyPlaces: () => Promise<void>;
 };
 const UserContext = createContext<UserContextType>({
   user: null,
@@ -44,12 +50,16 @@ const UserContext = createContext<UserContextType>({
   pickImage: async () => undefined,
   updateUsername: async () => {},
   updateSearchRadius: async () => {},
+  nearbyPlaces: [],
+  fetchNearbyPlaces: async () => {},
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [nearbyPlaces, setNearbyPlaces] = useState<any[]>([]);
+  const [placesLoading, setPlacesLoading] = useState(false);
 
   const uploadProfilePicture = async (uri: string) => {
     if (!user) return;
@@ -217,6 +227,34 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       return null;
     }
   };
+  const fetchNearbyPlaces = async () => {
+    if (!userData?.location.coordinates || !userData?.searchRadius) return;
+
+    try {
+      setPlacesLoading(true);
+
+      const {latitude, longitude} = userData.location.coordinates;
+
+      const response = await axios.get(PLACES_API, {
+        params: {
+          location: `${latitude},${longitude}`,
+          radius: userData.searchRadius * 1000, // Convert km to meters
+          type: 'bar|night_club|restaurant',
+          key: GOOGLE_API_KEY,
+        },
+      });
+
+      if (response.data.status === 'OK') {
+        setNearbyPlaces(response.data.results);
+      } else {
+        console.error('Places API error:', response.data.status);
+      }
+    } catch (error) {
+      console.error('Error fetching places:', error);
+    } finally {
+      setPlacesLoading(false);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -276,8 +314,20 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, userData, loading, signOut, updateLocation, pickImage, updateUsername,
-      updateSearchRadius}}>
+<UserContext.Provider
+      value={{
+        user,
+        userData,
+        loading,
+        signOut,
+        updateLocation,
+        pickImage,
+        updateUsername,
+        updateSearchRadius,
+        nearbyPlaces,
+        fetchNearbyPlaces,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
