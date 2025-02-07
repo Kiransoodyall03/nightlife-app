@@ -1,6 +1,6 @@
 // components/Button/index.tsx
 import React from 'react';
-import { TouchableOpacity, Text, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, ViewStyle, TextStyle, ActivityIndicator, View, Image } from 'react-native';
 import styles from './styles';
 
 export interface ButtonProps {

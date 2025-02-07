@@ -12,7 +12,12 @@ export default StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center', // Centers content vertically inside the card
     alignItems: 'center', // Centers content horizontally inside the card
-    marginBottom: 100
+    marginBottom: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   image: {
     width: '100%',
@@ -26,11 +31,31 @@ export default StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: 'bold',
+    fontFamily: 'Jaldi-Regular',
     color: '#fff',
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  typesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  typeBox: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  typeText: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
   },
   tag: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -47,15 +72,24 @@ export default StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#fff',
+    color: '#666',
+    marginBottom: 12,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  distance: {
+    fontSize: 14,
+    color: '#007AFF',
+  },
+  rating: {
+    fontSize: 14,
+    color: '#FFA500',
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 16,
   },
 });

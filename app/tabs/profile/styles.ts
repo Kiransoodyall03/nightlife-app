@@ -2,8 +2,9 @@ import { StyleSheet } from 'react-native';
 
 export default StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#fff',
+    paddingBottom: 20,
   },
   backgroundHeader: {
     position: 'absolute',
@@ -70,7 +71,7 @@ export default StyleSheet.create({
   profileSection: {
     alignItems: 'center',
     marginBottom: 32,
-    paddingTop: 30, // Space for profile image
+    paddingTop: 30,
   },
   section: {
     marginBottom: 20,
@@ -103,7 +104,7 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: '#ff0000',
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'Jaldi-Regular',
@@ -123,6 +124,7 @@ export default StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
     marginTop: 20,
+    flexGrow: 1,
   },
   settingItem: {
     paddingVertical: 16,
@@ -138,6 +140,7 @@ export default StyleSheet.create({
   actionsSection: {
     marginTop: 24,
     paddingHorizontal: 20,
+    width: '100%',
   },
   actionButton: {
     paddingVertical: 12,

@@ -28,7 +28,22 @@ interface UserData {
   uid: string;
   createdAt: Date;
 }
-
+interface GooglePlace {
+  place_id: string;
+  name: string;
+  types: string[];
+  vicinity: string;
+  rating?: number;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  photos?: Array<{
+    photo_reference: string;
+  }>;
+}
 type UserContextType = {
   user: User | null;
   userData: UserData | null;
@@ -38,8 +53,15 @@ type UserContextType = {
   pickImage: () => Promise<string | undefined>;
   updateUsername: (newUsername: string) => Promise<void>;
   updateSearchRadius: (newRadius: number) => Promise<void>;
-  nearbyPlaces: any[];
-  fetchNearbyPlaces: () => Promise<void>;
+  nearbyPlaces: GooglePlace[];
+  nextPageToken: string | null;
+  fetchNearbyPlaces: (options?: {
+    excludedTypes?: string[];
+    types?: string[];
+    pageToken?: string | null;
+  }) => Promise<{ results: GooglePlace[]; nextPageToken: string | null }>;
+  placesLoading: boolean;
+  hasMorePlaces: boolean;
 };
 const UserContext = createContext<UserContextType>({
   user: null,
@@ -51,15 +73,21 @@ const UserContext = createContext<UserContextType>({
   updateUsername: async () => {},
   updateSearchRadius: async () => {},
   nearbyPlaces: [],
-  fetchNearbyPlaces: async () => {},
+  fetchNearbyPlaces: async () => ({ results: [], nextPageToken: null }), // Fixed return value
+  nextPageToken: null,
+  placesLoading: false,
+  hasMorePlaces: false,
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [nearbyPlaces, setNearbyPlaces] = useState<any[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<GooglePlace[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
+  const [hasMorePlaces, setHasMorePlaces] = useState(true);
+  const [cooldown, setCooldown] = useState(false);
 
   const uploadProfilePicture = async (uri: string) => {
     if (!user) return;
@@ -227,30 +255,49 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       return null;
     }
   };
-  const fetchNearbyPlaces = async () => {
-    if (!userData?.location.coordinates || !userData?.searchRadius) return;
 
+  const fetchNearbyPlaces = async (options?: {
+    excludedTypes?: string[];
+    types?: string[];
+    pageToken?: string | null;
+  }): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
+    if (!userData?.location.coordinates || !userData?.searchRadius) {
+      return { results: [], nextPageToken: null };
+    }
+  
     try {
       setPlacesLoading(true);
-
-      const {latitude, longitude} = userData.location.coordinates;
-
-      const response = await axios.get(PLACES_API, {
-        params: {
-          location: `${latitude},${longitude}`,
-          radius: userData.searchRadius * 1000, // Convert km to meters
-          type: 'bar|night_club|restaurant',
-          key: GOOGLE_API_KEY,
-        },
-      });
-
+      const { latitude, longitude } = userData.location.coordinates;
+  
+      const params = {
+        location: `${latitude},${longitude}`,
+        radius: userData.searchRadius * 1000,
+        type: options?.types?.join('|') || 'bar|night_club|restaurant',
+        key: GOOGLE_API_KEY,
+        pagetoken: options?.pageToken || undefined,
+      };
+  
+      const response = await axios.get<{
+        results: GooglePlace[];
+        next_page_token?: string;
+        status: string;
+      }>(PLACES_API, { params });
+  
       if (response.data.status === 'OK') {
-        setNearbyPlaces(response.data.results);
-      } else {
-        console.error('Places API error:', response.data.status);
+        const filteredResults = response.data.results.filter((place) => 
+          !place.types?.some(type => options?.excludedTypes?.includes(type))
+        );
+        
+        return {
+          results: filteredResults,
+          nextPageToken: response.data.next_page_token || null
+        };
       }
+      
+      return { results: [], nextPageToken: null };
     } catch (error) {
       console.error('Error fetching places:', error);
+      return { results: [], nextPageToken: null };
     } finally {
       setPlacesLoading(false);
     }
@@ -312,6 +359,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Sign out error:', error);
     }
   };
+  useEffect(() => {
+    if (userData?.location.coordinates && userData?.searchRadius) {
+      setNearbyPlaces([]);
+      setNextPageToken(null);
+      setHasMorePlaces(true);
+      fetchNearbyPlaces();
+    }
+  }, [userData?.location.coordinates, userData?.searchRadius]);
 
   return (
 <UserContext.Provider
@@ -326,6 +381,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         updateSearchRadius,
         nearbyPlaces,
         fetchNearbyPlaces,
+        nextPageToken,
+        placesLoading,
+        hasMorePlaces,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import VenueCard from '../../../src/components/VenueCard';
@@ -7,11 +7,14 @@ import styles from './styles';
 import { useUser } from 'src/context/UserContext';
 
 export default function DiscoverScreen() {
-  const {nearbyPlaces, fetchNearbyPlaces, userData} = useUser();
+  const { fetchNearbyPlaces, userData } = useUser();
   const [venues, setVenues] = useState<Venue[]>([]);
   const swiperRef = useRef<Swiper<Venue> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const transformPlacesToVenues = (places: any[]): Venue[] => {
+  const transformPlacesToVenues = useCallback((places: any[]): Venue[] => {
     return places.map(place => ({
       id: place.place_id,
       name: place.name,
@@ -23,82 +26,86 @@ export default function DiscoverScreen() {
       rating: place.rating || 0,
       distance: calculateDistance(place.geometry.location)
     }));
-  };
+  }, []);
 
-  const calculateDistance = (placeLocation: {latitude: number, longitude: number}) =>
-  {
+  const calculateDistance = useCallback((placeLocation: { lat: number, lng: number }) => {
     if (!userData?.location) return 'N/A';
-    const userLatitude = userData.location.coordinates.latitude;
-    const userLongitude = userData.location.coordinates.longitude;
-    const radius = (x: number) =>x * Math.PI /180;
+    
+    const userLat = userData.location.coordinates.latitude;
+    const userLng = userData.location.coordinates.longitude;
+    
+    const toRad = (x: number) => x * Math.PI / 180;
+    const R = 6371; // Earth radius in km
 
-    const EarthRadius = 6371;
-    const distanceLatitude = radius(placeLocation.latitude - userLatitude);
-    const distanceLongitude = radius(placeLocation.longitude - userLongitude);
-    const a = Math.sin(distanceLatitude/2) * Math.sin(distanceLatitude/2) + Math.cos(radius(userLatitude))
-    * Math.cos(radius(placeLocation.latitude)) * Math.sin(distanceLongitude/2) * Math.sin(distanceLongitude/2);
-
+    const dLat = toRad(placeLocation.lat - userLat);
+    const dLon = toRad(placeLocation.lng - userLng);
+    
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(toRad(userLat)) * Math.cos(toRad(placeLocation.lat)) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+      
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return `${(c * EarthRadius).toFixed(1)} km`;
-  };
+    return `${(R * c).toFixed(1)} km`;
+  }, [userData?.location]);
 
-  useEffect(()=> {
-    if (userData?.location && userData?.searchRadius){
-      fetchNearbyPlaces();
+  const loadInitialData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetchNearbyPlaces({
+        types: ['book store', 'gym', 'spa', 'health', 'clothing_store'],
+        excludedTypes: ['school', 'university']
+      });
+      
+      setVenues(transformPlacesToVenues(response.results));
+      setNextPageToken(response.nextPageToken);
+    } catch (error) {
+      console.error('Initial load error:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [userData?.location, userData?.searchRadius]);
-  
-  useEffect(()=> {
-    if (nearbyPlaces.length > 0){
-      setVenues(transformPlacesToVenues(nearbyPlaces));
+  }, [fetchNearbyPlaces, transformPlacesToVenues]);
+  const loadMoreData = useCallback(async () => {
+    if (!nextPageToken || isLoadingMore) return;
+
+    try {
+      setIsLoadingMore(true);
+      const response = await fetchNearbyPlaces({
+        pageToken: nextPageToken,
+        types: ['book store', 'gym', 'spa', 'health', 'clothing_store'],
+        excludedTypes: ['school', 'university']
+      });
+      
+      setVenues(prev => [...prev, ...transformPlacesToVenues(response.results)]);
+      setNextPageToken(response.nextPageToken);
+    } catch (error) {
+      console.error('Load more error:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
-  }, [nearbyPlaces]);
+  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, transformPlacesToVenues]);
 
+  useEffect(() => {
+    if (userData?.location) {
+      loadInitialData();
+    }
+  }, [userData?.location, loadInitialData]);
 
-const VENUES: Venue[] = [
-  {
-    id: '1',
-    name: 'Skyline Lounge',
-    image: 'https://picsum.photos/400/600',
-    description: 'Rooftop bar with amazing city views',
-    type: 'Lounge & Bar',
-    rating: 4.5,
-    distance: '0.5 km'
-  },
-  {
-    id: '2',
-    name: 'The Jazz Club',
-    image: 'https://picsum.photos/400/601',
-    description: 'Live jazz music and craft cocktails',
-    type: 'Music Venue',
-    rating: 4.7,
-    distance: '1.2 km'
-  },
-  {
-    id: '3',
-    name: 'Neon Nightclub',
-    image: 'https://picsum.photos/400/602',
-    description: 'Electronic music and dance floors',
-    type: 'Nightclub',
-    rating: 4.2,
-    distance: '0.8 km'
-  }
-];
+  const handleSwipedAll = useCallback(() => {
+    if (nextPageToken) {
+      loadMoreData();
+      swiperRef.current?.jumpToCardIndex(0);
+    }
+  }, [nextPageToken, loadMoreData]);
 
   const handleSwipedRight = (index: number) => {
     console.log(`Liked: ${venues[index].name}`);
-    // Add like functionality here
   };
 
   const handleSwipedLeft = (index: number) => {
     console.log(`Passed: ${venues[index].name}`);
-    // Add pass functionality here
   };
 
-  const handleSwipedAll = () => {
-    setVenues([]);
-    fetchNearbyPlaces();
-  };
   if (!userData?.location) {
     return (
       <View style={styles.container}>
@@ -107,39 +114,42 @@ const VENUES: Venue[] = [
     );
   }
 
-  const handleLike = () => {
-    swiperRef.current?.swipeRight();
-  };
+  if (isLoading) {
+    return (
+      <View style={styles.LoadingContainer}>
+        <ActivityIndicator size="large" />
+        <Text>Loading venues...</Text>
+      </View>
+    );
+  }
 
-  const handleDislike = () => {
-    swiperRef.current?.swipeLeft();
-  };
-
-  const handleRewind = () => {
-    swiperRef.current?.swipeBack();
-  };
+  if (venues.length === 0) {
+    return (
+      <View style={styles.LoadingContainer}>
+        <Text>No venues found in your area.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.cardsContainer}>
       <Swiper
         ref={swiperRef}
         cards={venues}
-        renderCard={(venue) => 
-          venue && (
-            <VenueCard 
-              venue={venue}
-              onLike={() => swiperRef.current?.swipeRight()}
-              onDislike={() => swiperRef.current?.swipeLeft()}
-              onRewind={() => swiperRef.current?.swipeBack()}
-            />
-          )
-        }
+        renderCard={(venue) => venue && (
+          <VenueCard 
+            venue={venue}
+            onLike={() => swiperRef.current?.swipeRight()}
+            onDislike={() => swiperRef.current?.swipeLeft()}
+            onRewind={() => swiperRef.current?.swipeBack()}
+          />
+        )}
         onSwipedRight={handleSwipedRight}
         onSwipedLeft={handleSwipedLeft}
         onSwipedAll={handleSwipedAll}
-        infinite
+        infinite={!nextPageToken}
         backgroundColor={'transparent'}
-        stackSize={3}
+        stackSize={4}
         stackScale={10}
         stackSeparation={14}
         animateOverlayLabelsOpacity
@@ -147,6 +157,12 @@ const VENUES: Venue[] = [
         swipeBackCard
         containerStyle={styles.swiper}
       />
+      {isLoadingMore && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" />
+          <Text>Loading more venues...</Text>
+        </View>
+      )}
     </View>
   );
 }

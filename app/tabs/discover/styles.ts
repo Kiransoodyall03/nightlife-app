@@ -46,6 +46,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  LoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    width: '100%',
+    alignItems: 'center'
+  },
 });
 
 export default styles;

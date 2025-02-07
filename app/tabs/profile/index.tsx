@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, ScrollView } from 'react-native';
 import styles from './styles';
 import { useUser } from '../../../src/context/UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -37,7 +37,10 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+    contentContainerStyle = {styles.container}
+      showsVerticalScrollIndicator = {false}
+    >
       {/* Background Header */}
       <Image 
         source={require('../../../assets/background-art/blue-background.jpg')}
@@ -137,7 +140,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
       </View>
 
       {/* Action Buttons Section */}
-      <View style={styles.actionsSection}>
+      <View style={[styles.actionsSection, { marginTop: 'auto' }]}>
         <TouchableOpacity style={styles.actionButton} onPress={handleSignOut}>
           <Text style={styles.buttonText}>Log-out</Text>
         </TouchableOpacity>
@@ -145,7 +148,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
           <Text style={[styles.buttonText, styles.deleteText]}>Delete Account</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 

@@ -23,23 +23,27 @@ interface VenueCardProps {
 }
 
 export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueCardProps) {
+  const types = venue.type.split(', ');
+  for (let i = 0; i < types.length; i++) {
+      if (types[i] === "point of interest" || types[i] === "establishment") {
+          types.splice(i, 1);
+          i--; 
+      }
+  }
   return (
     <View style={styles.card}>
       <Image source={{ uri: venue.image }} style={styles.image} resizeMode="cover" />
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{venue.name}</Text>
-        {venue.tags && venue.tags.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {venue.tags.map((tag) => (
-              <View key={tag} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-        <Text style={styles.type}>{venue.type}</Text>
-        <Text style={styles.description}>{venue.description}</Text>
+        <View style={styles.typesContainer}>
+          {types.map((type, index) => (
+            <View key={index} style={styles.typeBox}>
+              <Text style={styles.typeText}>{type}</Text>
+            </View>
+          ))}
+        </View>
         <View style={styles.footer}>
+          <Text style={styles.rating}>⭐ {venue.rating}</Text>
         </View>
         <View style={styles.actionButtons}>
           <Button onPress={onDislike} variant="danger" size="medium" icon={<X size={24} />} />
