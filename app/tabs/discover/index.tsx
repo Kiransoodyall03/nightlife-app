@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+
 import { View, ActivityIndicator, Text } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import VenueCard from '../../../src/components/VenueCard';
@@ -13,20 +14,24 @@ export default function DiscoverScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
-  const transformPlacesToVenues = useCallback((places: any[]): Venue[] => {
+  const transformPlacesToVenues = (places: any[]): Venue[] => {
     return places.map(place => ({
-      id: place.place_id,
-      name: place.name,
-      image: place.photos?.[0]?.photo_reference 
-        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${process.env.EXPO_PUBLIC_GOOGLE_API_KEY}`
+      id: place.id,
+      name: place.displayName?.text || 'Unnamed Venue',
+      image: place.photos?.[0]?.name 
+        ? `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=400&key=${GOOGLE_API_KEY}`
         : 'https://picsum.photos/400/600',
-      description: place.vicinity,
-      type: place.types?.join(', ').replace(/_/g, ' ') || 'Venue',
+      description: place.formattedAddress || 'Address not available',
+      type: place.types?.join(', ') || 'Venue',
       rating: place.rating || 0,
-      distance: calculateDistance(place.geometry.location)
+      distance: calculateDistance({
+        lat: place.location?.latitude,
+        lng: place.location?.longitude
+      })
     }));
-  }, []);
+  };
 
   const calculateDistance = useCallback((placeLocation: { lat: number, lng: number }) => {
     if (!userData?.location) return 'N/A';
@@ -53,37 +58,49 @@ export default function DiscoverScreen() {
     try {
       setIsLoading(true);
       const response = await fetchNearbyPlaces({
-        types: ['book store', 'gym', 'spa', 'health', 'clothing_store'],
-        excludedTypes: ['school', 'university']
+        types: ['bar', 'night_club', 'restaurant'],
+        excludedTypes: ['school', 'university','store']
       });
       
-      setVenues(transformPlacesToVenues(response.results));
+      setVenues(prev => [
+        ...transformPlacesToVenues(response.results)
+      ]);
       setNextPageToken(response.nextPageToken);
     } catch (error) {
-      console.error('Initial load error:', error);
+      console.error('Initialization error:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchNearbyPlaces, transformPlacesToVenues]);
+  }, [fetchNearbyPlaces]);
+
   const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore) return;
-
+  
     try {
       setIsLoadingMore(true);
       const response = await fetchNearbyPlaces({
         pageToken: nextPageToken,
-        types: ['book store', 'gym', 'spa', 'health', 'clothing_store'],
+        types: ['bar', 'night_club', 'restaurant','food',
+  'sports_bar'],
         excludedTypes: ['school', 'university']
       });
       
-      setVenues(prev => [...prev, ...transformPlacesToVenues(response.results)]);
+      // Merge new results while avoiding duplicates
+      setVenues(prev => {
+        const newVenues = response.results.filter(newPlace => 
+          !prev.some(existingPlace => existingPlace.id === newPlace.place_id)
+        );
+        return [...prev, ...transformPlacesToVenues(newVenues)];
+      });
+      
       setNextPageToken(response.nextPageToken);
     } catch (error) {
       console.error('Load more error:', error);
+      alert('Failed to load more venues');
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, transformPlacesToVenues]);
+  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces]);
 
   useEffect(() => {
     if (userData?.location) {

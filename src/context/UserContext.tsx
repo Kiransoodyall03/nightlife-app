@@ -7,10 +7,11 @@ import * as Location from 'expo-location';
 import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import firebase from 'firebase/app';
 
 const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
-const PLACES_API = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
+const PLACES_API = 'https://places.googleapis.com/v1/places:searchNearby';
 const storage = getStorage();
 
 interface UserData {
@@ -88,6 +89,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [placesLoading, setPlacesLoading] = useState(false);
   const [hasMorePlaces, setHasMorePlaces] = useState(true);
   const [cooldown, setCooldown] = useState(false);
+  const VALID_TYPES = [
+    'bar', 
+    'night_club',
+    'restaurant',
+    'meal_takeaway', // Instead of generic 'food'
+    'sports_bar'
+  ];
 
   const uploadProfilePicture = async (uri: string) => {
     if (!user) return;
@@ -261,45 +269,67 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     types?: string[];
     pageToken?: string | null;
   }): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
-    if (!userData?.location.coordinates || !userData?.searchRadius) {
-      return { results: [], nextPageToken: null };
-    }
-  
     try {
-      setPlacesLoading(true);
-      const { latitude, longitude } = userData.location.coordinates;
+      if (!userData?.location?.coordinates || !userData.searchRadius) {
+        return { results: [], nextPageToken: null };
+      }
   
-      const params = {
-        location: `${latitude},${longitude}`,
-        radius: userData.searchRadius * 1000,
-        type: options?.types?.join('|') || 'bar|night_club|restaurant',
-        key: GOOGLE_API_KEY,
-        pagetoken: options?.pageToken || undefined,
+      // Use valid place types from new API
+      const validTypes = [
+        'bar', 
+        'night_club', 
+        'restaurant', 
+        'casino',
+        'comedy_club',
+        'event_venue',
+        'karaoke'
+      ];
+  
+      const requestBody = {
+        includedTypes: options?.types?.length ? options.types : validTypes,
+        maxResultCount: 20,
+        locationRestriction: {
+          circle: {
+            center: {
+              latitude: userData.location.coordinates.latitude,
+              longitude: userData.location.coordinates.longitude
+            },
+            radius: Math.min(userData.searchRadius * 1000, 50000) // Max 50km
+          }
+        },
+        ...(options?.pageToken && { pageToken: options.pageToken })
       };
   
-      const response = await axios.get<{
-        results: GooglePlace[];
-        next_page_token?: string;
-        status: string;
-      }>(PLACES_API, { params });
+      const response = await axios.post(PLACES_API, requestBody, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Android-Package':'com.KiranAman.nightlifeapp',
+          'X-Android-Cert':'8F:15:A1:E9:BF:EF:63:A9:8B:09:7D:CB:19:52:2C:55:37:F3:D4:24',
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types,places.rating,places.photos,places.location',
+        }
+      });
   
-      if (response.data.status === 'OK') {
-        const filteredResults = response.data.results.filter((place) => 
-          !place.types?.some(type => options?.excludedTypes?.includes(type))
+      if (response.data?.places) {
+        const filteredResults = response.data.places.filter((place: any) => 
+          !place.types?.some((type: string) => options?.excludedTypes?.includes(type))
         );
         
         return {
           results: filteredResults,
-          nextPageToken: response.data.next_page_token || null
+          nextPageToken: response.data.nextPageToken || null
         };
       }
+  
+      return { results: [], nextPageToken: null };
       
-      return { results: [], nextPageToken: null };
     } catch (error) {
-      console.error('Error fetching places:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('API Error:', error.response?.data || error.message);
+      } else {
+        console.error('API Error:', error);
+      }
       return { results: [], nextPageToken: null };
-    } finally {
-      setPlacesLoading(false);
     }
   };
 
