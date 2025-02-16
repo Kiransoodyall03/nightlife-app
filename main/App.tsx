@@ -11,6 +11,7 @@ import DiscoverScreen from '../app/tabs/discover';
 import GroupScreen from '../app/tabs/group';
 import ProfileScreen from '../app/tabs/profile';
 import LoginScreen from '../app/screens/login';
+import FilterScreen from 'app/screens/filter';
 import SignUpScreen from '../app/screens/register'; // Add this import
 import TitleComponent from '../src/components/Title-Dark/title-animated';
 import { useFonts } from 'expo-font';
@@ -23,6 +24,7 @@ type StackParamList = {
   Login: undefined;
   Register: undefined; // Add SignUp route
   DrawerNavigator: undefined;
+  Filter: undefined;
 };
 
 // Keep other type definitions the same
@@ -159,6 +161,7 @@ export default function App() {
         {/* Auth Screens */}
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={SignUpScreen} />
+        <Stack.Screen name="Filter" component={FilterScreen} />
         
         {/* Main App */}
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />

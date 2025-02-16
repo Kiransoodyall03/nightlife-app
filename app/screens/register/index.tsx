@@ -119,7 +119,7 @@ const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => 
   
 
     if (result.success) {
-      navigation.navigate('DrawerNavigator');
+      navigation.navigate('Filter');
     } else {
       Alert.alert('Error', error || 'Registration failed');
     }
