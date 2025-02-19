@@ -1,17 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Added useEffect
 import { View, Text, TextInput, TouchableOpacity, Image, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { styles } from './styles';
 import TitleComponent from '../../../src/components/Title-Light/title-animated';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../../../src/services/auth/useAuth'; // Update path accordingly
-import { validateEmail } from '../../../src/services/auth/validation'; // Update path accordingly
-import { LoginScreenNavigationProp } from '../../../types/navigation'; // Update path
+import { useAuth } from '../../../src/services/auth/useAuth';
+import { validateEmail } from '../../../src/services/auth/validation';
+import { LoginScreenNavigationProp } from '../../../types/navigation';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../../../src/services/firebase/config';
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { performLogin, loading, error } = useAuth();
+
+  // 🔴 Google Authentication Hook 🔴
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_CLIENT_ID, // From Google Cloud Console
+    webClientId: process.env.EXPO_FIREBASE_CLIENT_ID, // From Firebase Project
+  });
+
+  // 🔴 Handle Google Auth Response 🔴
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const credential = GoogleAuthProvider.credential(id_token);
+      
+      signInWithCredential(auth, credential)
+        .then(() => navigation.navigate('DrawerNavigator'))
+        .catch((error) => Alert.alert('Google Sign-In Error', error.message));
+    }
+  }, [response]);
+
   const handleSubmit = async () => {
     if (!validateEmail(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
@@ -42,7 +66,7 @@ const LoginScreen = () => {
           <TitleComponent text="NightLife" />
         </View>
 
-        {/* Social Login Buttons (Placeholder) */}
+        {/* Social Login Buttons */}
         <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFFFFF' }]}>
           <Image
             source={require('@assets/icons/apple-icon.png')}
@@ -51,22 +75,28 @@ const LoginScreen = () => {
           <Text style={[styles.socialButtonText, { color: '#000000' }]}>Continue with Apple</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFFFFF' }]}>
+        {/* 🔴 Updated Google Sign-In Button 🔴 */}
+        <TouchableOpacity 
+          style={[styles.socialButton, { backgroundColor: '#FFFFFF' }]}
+          onPress={() => promptAsync()}
+          disabled={!request}
+        >
           <Image
             source={require('@assets/icons/google-icon.png')}
             style={styles.socialIcon}
           />
-          <Text style={[styles.socialButtonText, { color: '#000000' }]}>Continue with Google</Text>
+          <Text style={[styles.socialButtonText, { color: '#000000' }]}>
+            Continue with Google
+          </Text>
         </TouchableOpacity>
 
-        {/* Divider */}
+        {/* Rest of your existing components */}
         <View style={styles.dividerContainer}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>or</Text>
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Input Fields */}
         <TextInput 
           style={styles.input} 
           placeholder="Enter Your Email" 
@@ -85,10 +115,8 @@ const LoginScreen = () => {
           onChangeText={setPassword}
         />
 
-        {/* Error Message */}
         {error && <Text style={styles.errorText}>{error}</Text>}
 
-        {/* Login Button */}
         <TouchableOpacity 
           style={styles.loginButton}
           onPress={handleSubmit}
@@ -101,7 +129,6 @@ const LoginScreen = () => {
           )}
         </TouchableOpacity>
 
-        {/* Sign Up Navigation */}
         <TouchableOpacity 
           style={styles.signUpButton}
           onPress={() => navigation.navigate('Register')}

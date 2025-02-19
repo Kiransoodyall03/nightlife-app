@@ -12,7 +12,12 @@
           "package_name": "com.KiranAman.nightlifeapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "461689495108-tvldvacun0dngu2m1m7okmbvji7lga83.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAdNMppJlGTJt9eJZDE_yG-ZJuyFcmjJTU"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "461689495108-srnu7910dgvnnoo2ma6vcv1u1g444626.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
