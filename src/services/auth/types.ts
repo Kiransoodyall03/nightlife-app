@@ -6,9 +6,9 @@ export interface FirebaseAuthError extends Error {
     message: string;
   };
   
-  export type AuthResult<T = any> = {
+  export interface AuthResult {
     success: boolean;
-    user?: T;
+    user?: any;
     error?: Error;
   };
   
@@ -17,7 +17,7 @@ export interface FirebaseAuthError extends Error {
     username: string;
     email: string;
     password: string;
-    location: {
+    location: { // ✅ Add this
       address: string;
       latitude: number;
       longitude: number;

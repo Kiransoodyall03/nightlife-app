@@ -34,12 +34,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingVertical: paddingVertical,
+    paddingVertical: height * 0.035, // Increased from 0.025
+    minHeight: 50, // Ensure minimum touch area
   },
   char: {
     fontSize: 28,
     fontWeight: 'bold',
+    lineHeight: 34, // Add lineHeight to prevent clipping
+    includeFontPadding: false, // Remove default font padding
   },
 });
-
 export default TitleComponent;

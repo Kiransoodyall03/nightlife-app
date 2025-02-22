@@ -15,6 +15,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    height: 50, // Fixed height for header
+    paddingHorizontal: 15,
   },
   headerIcon: {
     width: 24,

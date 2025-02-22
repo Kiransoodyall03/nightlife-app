@@ -3,6 +3,7 @@
     "name": "nightlife-app",
     "slug": "nightlife-app",
     "version": "1.0.0",
+    "scheme": "nightlife-app",
     "assets": [
       "./assets/icons/"
     ],

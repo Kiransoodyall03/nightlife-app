@@ -97,31 +97,38 @@ const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => 
   }, [confirmPassword, password]);
 
   const handleSubmit = async () => {
-    if (!validateUsername(username) || !validateEmail(email) || !validatePassword(password) || password !== confirmPassword) {
+    if (!validateUsername(username) || 
+        !validateEmail(email) || 
+        !validatePassword(password) || 
+        password !== confirmPassword) {
       Alert.alert('Error', 'Please fix all validation errors before submitting');
       return;
     }
 
-    if (!location || !location.latitude || !location.longitude) {
+    if (!location) {
+      Alert.alert('Error', 'Location is required');
       return;
-    }  
+    } 
 
-    const result = await handleRegister({
-      username,
-      email,
-      password,
-      location: {
-        address: location.address,
-        latitude: location.latitude,  // Pass numeric values directly
-        longitude: location.longitude
+    try {
+      const result = await handleRegister({
+        username,
+        email,
+        password,
+        location: {
+          address: location.address,
+          latitude: location.latitude,
+          longitude: location.longitude
+        }
+      });
+
+      if (result.success) {
+        navigation.navigate('Filter');
+      } else {
+        Alert.alert('Error', error || 'Registration failed');
       }
-    });
-  
-
-    if (result.success) {
-      navigation.navigate('Filter');
-    } else {
-      Alert.alert('Error', error || 'Registration failed');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to create location record');
     }
   };
 

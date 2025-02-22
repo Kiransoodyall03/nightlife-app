@@ -5,7 +5,7 @@ interface TitleComponentProps {
   text: string;
 }
 const { width, height } = Dimensions.get('window');
-var paddingVertical = height * 0.025;
+
 
 const TitleComponent: React.FC<TitleComponentProps> = ({ text }) => {
   const calculateColor = (index: number, totalLength: number): string => {
@@ -34,10 +34,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingVertical: paddingVertical,
   },
   char: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 'bold',
   },
 });
