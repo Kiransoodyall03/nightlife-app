@@ -127,7 +127,7 @@ function TabNavigator() {
 
 function DrawerNavigator() {
   const handleLogout = () => {
-    console.log('Logging out...');
+    //console.log('Logging out...');
   };
 
   return (

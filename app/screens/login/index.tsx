@@ -20,7 +20,7 @@ const LoginScreen = () => {
 
   // 🔴 Google Authentication Hook 🔴
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: process.env.EXPO_CLIENT_ID, // From Google Cloud Console
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, // From Google Cloud Console
     webClientId: process.env.EXPO_FIREBASE_CLIENT_ID, // From Firebase Project
   });
 

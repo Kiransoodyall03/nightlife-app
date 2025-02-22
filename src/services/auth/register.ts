@@ -28,7 +28,7 @@ const fetchLocation = async () => {
       address: formattedAddress,
     };
   } catch (error) {
-    console.error('Error fetching location:', error);
+   // console.error('Error fetching location:', error);
     throw error;
   }
 };
@@ -64,7 +64,7 @@ export const handleRegistration = async (
 
     return { success: true, user: userCredential.user };
   } catch (error) {
-    console.error('Registration error:', error);
+  //  console.error('Registration error:', error);
     return { success: false, error: error as Error };
   }
 };

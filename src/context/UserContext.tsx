@@ -146,7 +146,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
       alert('Username updated successfully!');
     } catch (error) {
-      console.error('Username update error:', error);
+     // console.error('Username update error:', error);
       alert('Failed to update username');
     } finally {
       setLoading(false);
@@ -171,7 +171,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
       alert('Search radius updated successfully!');
     } catch (error) {
-      console.error('Search radius update error:', error);
+     // console.error('Search radius update error:', error);
       alert('Failed to update search radius');
     } finally {
       setLoading(false);
@@ -217,7 +217,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         return downloadURL;
       }
     } catch (error) {
-      console.error('Image upload error:', error);
+     // console.error('Image upload error:', error);
       throw error;
     }
   };
@@ -225,7 +225,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.warn('Location permission denied');
+       // console.warn('Location permission denied');
         return null;
       }
 
@@ -259,7 +259,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       };
 
     } catch (error) {
-      console.error('Geocoding error:', error);
+     // console.error('Geocoding error:', error);
       return null;
     }
   };
@@ -325,9 +325,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('API Error:', error.response?.data || error.message);
+       // console.error('API Error:', error.response?.data || error.message);
       } else {
-        console.error('API Error:', error);
+       // console.error('API Error:', error);
       }
       return { results: [], nextPageToken: null };
     }
@@ -344,7 +344,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           setUserData(null);
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
+       // console.error("Error fetching user data:", error);
         setUserData(null);
       } finally {
         setLoading(false);
@@ -376,7 +376,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }));
     } catch (error) {
-      console.error('Update error:', error);
+      //console.error('Update error:', error);
     }
   };
 
@@ -386,7 +386,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setUserData(null);
     } catch (error) {
-      console.error('Sign out error:', error);
+    //  console.error('Sign out error:', error);
     }
   };
   useEffect(() => {

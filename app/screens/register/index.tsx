@@ -67,7 +67,7 @@ const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => 
         });
       }
     } catch (error) {
-      console.error('Location error:', error);
+     // console.error('Location error:', error);
       Alert.alert('Error', 'Failed to fetch location. Please try again.');
     } finally {
       setLocationLoading(false);

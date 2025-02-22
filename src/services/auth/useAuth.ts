@@ -30,7 +30,7 @@ export const useAuth = () => {
 
       return result;
     } catch (error) {
-      console.error('Registration error:', error);
+     // console.error('Registration error:', error);
       setError('An unexpected error occurred during registration.');
       return { success: false, error: error as Error };
     } finally {
@@ -51,7 +51,7 @@ export const useAuth = () => {
 
       return result;
     } catch (error) {
-      console.error('Login error:', error);
+    //  console.error('Login error:', error);
       setError('An unexpected error occurred during login.');
       return { success: false, error: error as Error };
     } finally {
