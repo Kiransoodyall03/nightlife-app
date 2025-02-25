@@ -38,3 +38,5 @@ import *NameScreen* from '../app/screens/foldername';
 
 5. Repeat step 4 in main/App.tsx
 
+Link to Designs of each page:
+https://www.figma.com/design/XbZOf2QEbZ7FWLNRdPHCPq/App?node-id=0-1&t=jJREjwslTcQhVeIl-1
