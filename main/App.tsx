@@ -99,7 +99,7 @@ function TabNavigator() {
         name="My Group"
         component={GroupScreen}
         options={{
-          headerTitle: () => <TitleComponent text="My Group" />,
+          headerTitle: () => <TitleComponent text="Groups" />,
           tabBarIcon: ({ focused }) => (
             <Image
               source={require('@assets/icons/group-icon.png')}

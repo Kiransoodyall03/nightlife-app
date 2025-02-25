@@ -20,7 +20,6 @@ export const handleRegistration = async (
       uid: userCredential.user.uid,
       username: userData.username,
       email: userData.email,
-      location_id: userData.location_id,
       searchRadius: 5,
       createdAt: new Date(),
     });
