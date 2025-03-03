@@ -2,10 +2,7 @@
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import { AuthResult, FirebaseAuthError, AuthUser } from './types';
-import { GeoPoint } from 'firebase/firestore';
-// Helper function to fetch user location
-
+import { AuthResult, AuthUser } from './types';
 export const handleRegistration = async (
   userData: AuthUser & {location_id: string}
 ): Promise<AuthResult> => {
@@ -21,6 +18,7 @@ export const handleRegistration = async (
       username: userData.username,
       email: userData.email,
       searchRadius: 5,
+      filterId: "",
       createdAt: new Date(),
     });
 

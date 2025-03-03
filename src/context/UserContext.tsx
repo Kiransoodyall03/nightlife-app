@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, db } from '../services/firebase/config';
+import { UserData, GooglePlace } from 'src/services/auth/types';
 import { doc, getDoc, updateDoc, GeoPoint } from 'firebase/firestore';
 import * as Location from 'expo-location';
 import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
@@ -14,37 +15,6 @@ const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 const PLACES_API = 'https://places.googleapis.com/v1/places:searchNearby';
 const storage = getStorage();
 
-interface UserData {
-  username: string;
-  email: string;
-  profilePicture?: string;
-  location: {
-    address: string;
-    coordinates: {
-      latitude: number;
-      longitude: number;
-    };
-  };
-  searchRadius: number;
-  uid: string;
-  createdAt: Date;
-}
-interface GooglePlace {
-  place_id: string;
-  name: string;
-  types: string[];
-  vicinity: string;
-  rating?: number;
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
-  photos?: Array<{
-    photo_reference: string;
-  }>;
-}
 type UserContextType = {
   user: User | null;
   userData: UserData | null;
@@ -96,39 +66,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     'meal_takeaway', // Instead of generic 'food'
     'sports_bar'
   ];
-
-  const uploadProfilePicture = async (uri: string) => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const storageRef = ref(storage, `profile-pictures/${user.uid}`);
-
-      await uploadBytes(storageRef, blob);
-
-      const downloadURL = await getDownloadURL(storageRef);
-
-      await updateDoc(doc(db, 'users', user.uid), {
-        profilePicture: downloadURL
-      });
-
-      setUserData(prev => ({
-        ...prev!,
-        profilePicture: downloadURL
-      }));
-
-      return downloadURL;
-    } catch (error) {
-      console.error('Upload error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
   const updateUsername = async (newUsername: string) => {
     if (!user) return;
 

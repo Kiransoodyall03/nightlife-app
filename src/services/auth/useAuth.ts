@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { handleLogin } from './login';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase/config';
-import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { handleRegistration } from './register';
-import { AuthResult, AuthUser } from './types';
-import { GeoPoint } from 'firebase/firestore'; // Import GeoPoint for Firestore
-import { User } from 'lucide-react-native';
+import { auth, db } from '../firebase/config';
+import { addDoc, collection, doc, setDoc, updateDoc, 
+  GeoPoint, runTransaction,  query,
+  where,
+  limit,
+  getDocs,
+  FieldPath,
+  documentId, } from 'firebase/firestore';
+import { AuthResult, AuthUser, FilterData } from './types';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -29,7 +31,7 @@ export const useAuth = () => {
       const user = userCredential.user;
 
       // 2. Create location document
-      const locationRef = await addDoc(collection(db, 'Locations'), {
+      const locationRef = await addDoc(collection(db, 'user_locations'), {
         address: userData.location.address,
         coordinates: new GeoPoint(
           userData.location.latitude,
@@ -57,6 +59,56 @@ export const useAuth = () => {
       setLoading(false);
     }
   };
+  const handleFilters = async (
+    filterData: FilterData
+  ): Promise<AuthResult> => {
+    setLoading(true);
+    setError(null);
+  
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+  
+      await runTransaction(db, async (transaction) => {
+        // 1. Create new filter
+        const filterRef = doc(collection(db, 'filters'));
+        transaction.set(filterRef, {
+          userId: user.uid,
+          filters: filterData.filters,
+          isFiltered: filterData.isFiltered,
+        });
+      
+        // 2. Update user document (only filterId)
+        const userRef = doc(db, 'users', user.uid);
+        transaction.update(userRef, {
+          filterId: filterRef.id
+        });
+      
+        // 3. Delete previous filters
+        const oldFiltersQuery = query(
+          collection(db, 'filters'),
+          where('userId', '==', user.uid),
+          where(documentId(), '!=', filterRef.id)
+        );
+        const oldFilters = await getDocs(oldFiltersQuery);
+        oldFilters.forEach(doc => {
+          transaction.delete(doc.ref);
+        });
+      });
+  
+      return { success: true };
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      setError(`Filter update failed: ${errorMessage}`);
+      return { 
+        success: false, 
+        error: new Error(`Filter Error: ${errorMessage}`) 
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const performLogin = async (email: string, password: string): Promise<AuthResult> => {
     setLoading(true);
     setError(null);
@@ -78,5 +130,5 @@ export const useAuth = () => {
     }
   };
 
-  return { handleRegister, performLogin, loading, error };
+  return { handleRegister, performLogin, loading, error, handleFilters };
 };
