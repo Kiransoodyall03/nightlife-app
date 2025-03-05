@@ -150,4 +150,30 @@ export default StyleSheet.create({
     color: '#FF3B30',
     fontFamily: 'Jaldi-Regular',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center'
+  },
+  retryText: {
+    color: '#007AFF',
+    marginTop: 10
+  },
+  inlineError: {
+    padding: 15,
+    backgroundColor: '#ffebee',
+    margin: 20,
+    borderRadius: 8
+  },
 });

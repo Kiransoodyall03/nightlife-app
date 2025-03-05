@@ -5,18 +5,17 @@ import { useAuth } from '../../../src/services/auth/useAuth';
 import { NavigationProp } from '@react-navigation/native';
 import { styles } from './styles';
 import { useUser } from '../../../src/context/UserContext';
+import { useNotification } from 'src/components/Notification/NotificationContext';
 
-const { width } = Dimensions.get('window');
 const NUM_COLUMNS = 3;
-const ITEM_MARGIN = 8;
-const ITEM_WIDTH = (width - (32 + (NUM_COLUMNS + 1) * ITEM_MARGIN)) / NUM_COLUMNS;
 
 const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { handleFilters, loading, error } = useAuth();
-    const { user, userData, signOut, updateLocation, pickImage, updateSearchRadius, updateUsername } = useUser();
+  const {showError, showSuccess} = useNotification();
+  const { handleFilters} = useAuth();
+  const { user } = useUser();
 
   // Replace with actual API call to fetch place types
   useEffect(() => {
@@ -60,7 +59,7 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
 
   const handleSubmitFilters = async () => {
     if (selectedTypes.length < 3) {
-      Alert.alert('Selection Required', 'Please select at least 3 interests');
+      showError('Please select at least 3 interests');
       return;
     }
   
@@ -74,12 +73,13 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       });
   
       if (result.success) {
+        showSuccess("Successfully Saved Filters");
         navigation.navigate("DrawerNavigator");
       } else if (result.error) {
         Alert.alert('Error', result.error.message);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to save filters. Please try again.');
+      showError('Failed to save filters. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

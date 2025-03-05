@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, ScrollView } from 'react-native';
 import styles from './styles';
 import { useUser } from '../../../src/context/UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { auth, db } from '../../../src/services/firebase/config';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useNotification } from 'src/components/Notification/NotificationContext';
 
 const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
   const { user, userData, signOut, updateLocation, pickImage, updateSearchRadius, updateUsername } = useUser();
@@ -11,30 +14,103 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
   const [newSearchRadius, setNewSearchRadius] = useState(userData?.searchRadius?.toString() || '5');
   const [editingUsername, setEditingUsername] = useState(false);
   const [editingRadius, setEditingRadius] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const { showSuccess, showError } = useNotification();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (!user) return;
+        
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setNewUsername(data?.username || '');
+          setNewSearchRadius(data?.searchRadius?.toString() || '5');
+        } else {
+          // Initialize new user document
+          await setDoc(doc(db, 'users', user.uid), {
+            username: 'New User',
+            email: user.email,
+            searchRadius: 5,
+            createdAt: new Date(),
+            profilePicture: '',
+            location: null
+          });
+          setNewUsername('New User');
+        }
+      } catch (err) {
+        setError('Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    setLoading(true);
+    fetchUserData();
+  }, [user]);
 
   const handleSignOut = async () => {
+    try {
       await signOut();
       navigation.navigate('Login');
+    } catch (error) {
+      setError('Failed to sign out');
+    }
   };
 
   const handleUpdateUsername = async () => {
-    if (newUsername.trim() === '') {
-      alert('Username cannot be empty');
-      return;
+    try {
+      if (!user) throw new Error('Not authenticated');
+      if (!newUsername.trim()) {
+        showError('Username cannot be empty');
+        return;
+      }
+      
+      await updateUsername(newUsername);
+      showSuccess("Username updated successfully");
+      setEditingUsername(false);
+    } catch (error) {
+      showError('Failed to update username');
     }
-    await updateUsername(newUsername);
-    setEditingUsername(false);
   };
 
-  const handleUpdateSearchRadius = async () => {
-    const radius = parseInt(newSearchRadius);
-    if (isNaN(radius) || radius < 1 || radius > 100) {
-      alert('Search radius must be between 1 and 100 km');
-      return;
+ const handleUpdateSearchRadius = async () => {
+    try {
+      const radius = parseInt(newSearchRadius);
+      if (isNaN(radius) || radius < 1 || radius > 100) {
+        showError('Search radius must be between 1-100 km');
+        return;
+      }
+      
+      await updateSearchRadius(radius);
+      showSuccess("Successfully updated search radius");
+      setEditingRadius(false);
+    } catch (error) {
+      showError('Failed to update search radius');
     }
-    await updateSearchRadius(radius);
-    setEditingRadius(false);
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={() => setError('')}>
+          <Text style={styles.retryText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -148,6 +224,12 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
           <Text style={[styles.buttonText, styles.deleteText]}>Delete Account</Text>
         </TouchableOpacity>
       </View>
+
+      {error ? (
+        <View style={styles.inlineError}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
     </ScrollView>
   );
 };

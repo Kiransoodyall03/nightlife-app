@@ -47,6 +47,7 @@ export const useAuth = () => {
         email: userData.email,
         location_id: locationRef.id,
         searchRadius: 5,
+        filterId: "",
         createdAt: new Date()
       });
 
@@ -71,15 +72,14 @@ export const useAuth = () => {
   
       await runTransaction(db, async (transaction) => {
         // 1. Create new filter
+        const userRef = doc(db, 'users', user.uid);
         const filterRef = doc(collection(db, 'filters'));
         transaction.set(filterRef, {
           userId: user.uid,
-          filters: filterData.filters,
-          isFiltered: filterData.isFiltered,
+          ...filterData
         });
       
         // 2. Update user document (only filterId)
-        const userRef = doc(db, 'users', user.uid);
         transaction.update(userRef, {
           filterId: filterRef.id
         });

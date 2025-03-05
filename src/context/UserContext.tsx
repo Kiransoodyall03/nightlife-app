@@ -59,13 +59,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [placesLoading, setPlacesLoading] = useState(false);
   const [hasMorePlaces, setHasMorePlaces] = useState(true);
   const [cooldown, setCooldown] = useState(false);
-  const VALID_TYPES = [
-    'bar', 
-    'night_club',
-    'restaurant',
-    'meal_takeaway', // Instead of generic 'food'
-    'sports_bar'
-  ];
+
   const updateUsername = async (newUsername: string) => {
     if (!user) return;
 
@@ -207,11 +201,18 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     pageToken?: string | null;
   }): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
     try {
+      const user = auth.currentUser;
       if (!userData?.location?.coordinates || !userData.searchRadius) {
         return { results: [], nextPageToken: null };
       }
-  
-      // Use valid place types from new API
+      const userDoc = await getDoc(doc(db, 'users',userData.uid));
+      let filters = [];
+      if(userDoc.exists() && userDoc.data().filterId){
+        const filterDoc = await getDoc(doc(db,'filters', userDoc.data().filterId));
+        if (filterDoc.exists()){
+          filters = filterDoc.data().filters;
+        }
+      };
       const validTypes = [
         'bar', 
         'night_club', 
@@ -221,9 +222,12 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         'event_venue',
         'karaoke'
       ];
-  
+      if (filters.length === 0) {
+        filters = validTypes; 
+      }
+
       const requestBody = {
-        includedTypes: options?.types?.length ? options.types : validTypes,
+        includedTypes: options?.types?.length ? options.types : filters,
         maxResultCount: 20,
         locationRestriction: {
           circle: {

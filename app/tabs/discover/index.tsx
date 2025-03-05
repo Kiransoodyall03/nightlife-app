@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-
 import { View, ActivityIndicator, Text } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import VenueCard from '../../../src/components/VenueCard';
 import { Venue } from '../../../src/components/VenueCard';
 import styles from './styles';
 import { useUser } from 'src/context/UserContext';
+import { useNotification } from 'src/components/Notification/NotificationContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from 'src/services/firebase/config';
 
 export default function DiscoverScreen() {
   const { fetchNearbyPlaces, userData } = useUser();
@@ -14,7 +16,33 @@ export default function DiscoverScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { showSuccess, showError } = useNotification();
+  const [userFilters, setUserFilters] = useState<string[]>([]);
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      if (!userData?.fiterId) {
+        showError('No filters found. Please set your preferences first.');
+        return;
+      }
+
+      try {
+        const filterDoc = await getDoc(doc(db, 'filters', userData.fiterId));
+        if (filterDoc.exists()) {
+          setUserFilters(filterDoc.data().filters);
+        } else {
+          showError('Failed to load filters. Using default preferences.');
+          setUserFilters(['bar', 'night_club', 'restaurant']);
+        }
+      } catch (error) {
+        showError('Error loading filters');
+        setUserFilters([]);
+      }
+    };
+
+    if (userData?.fiterId) fetchFilters();
+  }, [userData?.fiterId, showError]);
 
   const transformPlacesToVenues = (places: any[]): Venue[] => {
     return places.map(place => ({
@@ -56,22 +84,26 @@ export default function DiscoverScreen() {
 
   const loadInitialData = useCallback(async () => {
     try {
+      if (!userFilters.length) {
+        showError('No filters available. Please set preferences first.');
+        return;
+      }
       setIsLoading(true);
       const response = await fetchNearbyPlaces({
-        types: ['bar', 'night_club', 'restaurant'],
-        excludedTypes: ['school', 'university','store']
+        types: userFilters,
       });
       
       setVenues(prev => [
         ...transformPlacesToVenues(response.results)
       ]);
       setNextPageToken(response.nextPageToken);
+      showSuccess('Venues successfully loaded');
     } catch (error) {
-      console.error('Initialization error:', error);
+     showError("Failed to initialize venues");
     } finally {
       setIsLoading(false);
     }
-  }, [fetchNearbyPlaces]);
+  }, [fetchNearbyPlaces, userFilters, showSuccess, showError]);
 
   const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore) return;
@@ -80,9 +112,7 @@ export default function DiscoverScreen() {
       setIsLoadingMore(true);
       const response = await fetchNearbyPlaces({
         pageToken: nextPageToken,
-        types: ['bar', 'night_club', 'restaurant','food',
-  'sports_bar'],
-        excludedTypes: ['school', 'university']
+        types:userFilters,
       });
       
       // Merge new results while avoiding duplicates
@@ -94,13 +124,14 @@ export default function DiscoverScreen() {
       });
       
       setNextPageToken(response.nextPageToken);
+      showSuccess('More venues loaded!');
     } catch (error) {
       console.error('Load more error:', error);
-      alert('Failed to load more venues');
+      showError("Failed to load more");
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces]);
+  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError]);
 
   useEffect(() => {
     if (userData?.location) {
@@ -112,8 +143,10 @@ export default function DiscoverScreen() {
     if (nextPageToken) {
       loadMoreData();
       swiperRef.current?.jumpToCardIndex(0);
+    } else {
+      showError('No more venues in your area');
     }
-  }, [nextPageToken, loadMoreData]);
+  }, [nextPageToken, loadMoreData, showError]);
 
   const handleSwipedRight = (index: number) => {
     console.log(`Liked: ${venues[index].name}`);

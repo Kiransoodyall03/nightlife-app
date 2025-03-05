@@ -1,5 +1,6 @@
 import { Text, View, Image, TouchableOpacity } from 'react-native';
 import React, { useEffect } from 'react';
+import { NotificationProvider } from 'src/components/Notification/NotificationContext';
 import 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -152,9 +153,10 @@ export default function App() {
   });
 
   return (
+    <NotificationProvider>
     <UserProvider>
     <NavigationContainer>
-      <Stack.Navigator 
+    <Stack.Navigator 
         initialRouteName="Login" 
         screenOptions={{ headerShown: false }}
       >
@@ -165,8 +167,9 @@ export default function App() {
         
         {/* Main App */}
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
-      </Stack.Navigator>
+    </Stack.Navigator>
     </NavigationContainer>
     </UserProvider>
+    </NotificationProvider>
   );
 }

@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, FlatList, Image, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { styles } from './styles';
+import { useNotification } from 'src/components/Notification/NotificationContext';
 
 // Types
 interface MatchedUser {
@@ -21,6 +22,7 @@ interface Location {
 }
 
 const LocationGroups: React.FC = () => {
+  const { showSuccess, showError } = useNotification();
   const locations: Location[] = [
     // Keep your existing sample data
     {
