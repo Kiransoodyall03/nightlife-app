@@ -33,6 +33,7 @@ type TabParamList = {
   Discover: undefined;
   'My Group': undefined;
   'My Profile': undefined;
+  'Filters': undefined;
 };
 
 type DrawerParamList = {
@@ -122,6 +123,19 @@ function TabNavigator() {
           ),
         }}
       />
+      <Tab.Screen
+      name='Filters'
+      component={FilterScreen}
+      options={{
+        headerTitle: () => <TitleComponent text="Filters" />,
+        tabBarIcon: ({ focused }) => (
+          <Image
+            source={require('@assets/icons/profile-icon.png')}
+            style={styles.tabIcon}
+          />
+        ),
+      }}
+      />
     </Tab.Navigator>
   );
 }
@@ -151,6 +165,7 @@ export default function App() {
     'Jaldi-Regular': require('../assets/fonts/Jaldi-Regular.ttf'),
     'Jaldi-Bold': require('../assets/fonts/Jaldi-Bold.ttf'),
   });
+  
 
   return (
     <NotificationProvider>

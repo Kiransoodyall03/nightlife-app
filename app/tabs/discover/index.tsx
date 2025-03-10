@@ -3,10 +3,12 @@ import { View, ActivityIndicator, Text } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import VenueCard from '../../../src/components/VenueCard';
 import { Venue } from '../../../src/components/VenueCard';
+import Button from 'src/components/Button';
 import styles from './styles';
 import { useUser } from 'src/context/UserContext';
+import { ErrorBoundary } from 'expo-router';
 import { useNotification } from 'src/components/Notification/NotificationContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, DocumentSnapshot, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from 'src/services/firebase/config';
 
 export default function DiscoverScreen() {
@@ -21,28 +23,27 @@ export default function DiscoverScreen() {
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
   useEffect(() => {
-    const fetchFilters = async () => {
-      if (!userData?.fiterId) {
-        showError('No filters found. Please set your preferences first.');
-        return;
-      }
+    let unsubscribe: () => void;
 
+    const fetchFilters = async () => {
       try {
-        const filterDoc = await getDoc(doc(db, 'filters', userData.fiterId));
-        if (filterDoc.exists()) {
-          setUserFilters(filterDoc.data().filters);
-        } else {
-          showError('Failed to load filters. Using default preferences.');
-          setUserFilters(['bar', 'night_club', 'restaurant']);
-        }
+        if (!userData?.filterId) return;
+  
+        const docRef = doc(db, 'filters', userData.filterId);
+        unsubscribe = onSnapshot(docRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserFilters(data.isFiltered ? data.filters : ['bar','resturant','cafe','night_club']);
+          }
+        });
       } catch (error) {
-        showError('Error loading filters');
-        setUserFilters([]);
+        setUserFilters(['bar','resturant','cafe','night_club']);
       }
     };
-
-    if (userData?.fiterId) fetchFilters();
-  }, [userData?.fiterId, showError]);
+  
+    fetchFilters();
+    return () => unsubscribe?.();
+  }, [userData?.filterId]);
 
   const transformPlacesToVenues = (places: any[]): Venue[] => {
     return places.map(place => ({
@@ -103,7 +104,7 @@ export default function DiscoverScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchNearbyPlaces, userFilters, showSuccess, showError]);
+  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, userFilters, userData?.location]);
 
   const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore) return;
@@ -134,10 +135,10 @@ export default function DiscoverScreen() {
   }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError]);
 
   useEffect(() => {
-    if (userData?.location) {
+    if (userData?.location && userFilters.length > 0) {
       loadInitialData();
     }
-  }, [userData?.location, loadInitialData]);
+  }, [userData?.location, loadInitialData, userFilters]);
 
   const handleSwipedAll = useCallback(() => {
     if (nextPageToken) {
@@ -180,10 +181,16 @@ export default function DiscoverScreen() {
       </View>
     );
   }
-
+  const ErrorFallback = (props: { error: Error; resetError: () => void }) => (
+    <View style={styles.container}>
+      <Text>Something went wrong:</Text>
+      <Text style={styles.errorText}>{props.error.message}</Text>
+      <Button title="Try again" onPress={props.resetError} />
+    </View>
+  );
   return (
     <View style={styles.cardsContainer}>
-      <Swiper
+      {<Swiper
         ref={swiperRef}
         cards={venues}
         renderCard={(venue) => venue && (
@@ -206,7 +213,7 @@ export default function DiscoverScreen() {
         animateCardOpacity
         swipeBackCard
         containerStyle={styles.swiper}
-      />
+      />}
       {isLoadingMore && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" />

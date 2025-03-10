@@ -24,7 +24,7 @@ export interface FirebaseAuthError extends Error {
         longitude: number;
       };
     };
-    fiterId?:  string;
+    filterId?:  string;
     searchRadius: number;
     uid: string;
     createdAt: Date;
