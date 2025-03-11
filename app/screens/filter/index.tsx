@@ -67,6 +67,7 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     
     try {
       const result = await handleFilters({
+        filterId: user?.uid || '',
         userId: user?.uid,
         filters: selectedTypes.map(type => type.replace(/ /g, '_')),
         isFiltered: selectedTypes.length > 0,

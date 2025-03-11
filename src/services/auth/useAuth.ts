@@ -2,13 +2,8 @@ import { useState } from 'react';
 import { handleLogin } from './login';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { addDoc, collection, doc, setDoc, updateDoc, 
-  GeoPoint, runTransaction,  query,
-  where,
-  limit,
-  getDocs,
-  FieldPath,
-  documentId, } from 'firebase/firestore';
+import { addDoc, collection, doc, setDoc, updateDoc, GeoPoint, runTransaction, 
+  query,where,getDocs,documentId } from 'firebase/firestore';
 import { AuthResult, AuthUser, FilterData } from './types';
 
 export const useAuth = () => {
@@ -31,21 +26,19 @@ export const useAuth = () => {
       const user = userCredential.user;
 
       // 2. Create location document
-      const locationRef = await addDoc(collection(db, 'user_locations'), {
+      await setDoc(doc(db, 'user_locations', user.uid), {
+        latitude: userData.location.latitude,
+        longitude: userData.location.longitude,
         address: userData.location.address,
-        coordinates: new GeoPoint(
-          userData.location.latitude,
-          userData.location.longitude
-        ),
-        userId: user.uid,
-        created_at: new Date()
+        locationId: user.uid
       });
 
       // 3. Create user document
       await setDoc(doc(db, 'users', user.uid), {
         username: userData.username,
         email: userData.email,
-        location_id: locationRef.id,
+        uid: user.uid,
+        locationId: user.uid,
         searchRadius: 5,
         filterId: "",
         createdAt: new Date()
@@ -53,7 +46,6 @@ export const useAuth = () => {
 
       return { success: true, user };
     } catch (error) {
-      // Handle errors
       setError('Registration failed: ' + (error as Error).message);
       return { success: false, error: error as Error };
     } finally {
@@ -75,8 +67,8 @@ export const useAuth = () => {
         const userRef = doc(db, 'users', user.uid);
         const filterRef = doc(collection(db, 'filters'));
         transaction.set(filterRef, {
-          userId: user.uid,
-          ...filterData
+          ...filterData,
+          filterId: filterRef.id,
         });
       
         // 2. Update user document (only filterId)
@@ -87,7 +79,6 @@ export const useAuth = () => {
         // 3. Delete previous filters
         const oldFiltersQuery = query(
           collection(db, 'filters'),
-          where('userId', '==', user.uid),
           where(documentId(), '!=', filterRef.id)
         );
         const oldFilters = await getDocs(oldFiltersQuery);

@@ -1,5 +1,5 @@
 // src/services/auth/types.ts
-import { GeoPoint } from 'firebase/firestore';
+import { User } from "firebase/auth";
 
 export interface FirebaseAuthError extends Error {
     code: string;
@@ -17,40 +17,56 @@ export interface FirebaseAuthError extends Error {
     username: string;
     email: string;
     profilePicture?: string;
-    location: {
-      address: string;
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-    };
-    filterId?:  string;
     searchRadius: number;
     uid: string;
     createdAt: Date;
   }
   
+  export interface GroupData{
+    groupId: string;
+    groupnName: string;
+    members: string[];
+    createdAt: Date;
+  }
   export interface AuthUser {
     username: string;
     email: string;
     password: string;
-    location: {
-      address: string;
-      latitude: number;
-      longitude: number;
-    };
   }
 
   export interface FilterData {
+    filterId: string;
     userId?: string;
     filters: string[];
     isFiltered: boolean;
   };
 
   export interface LocationData {
+    locationId: string;
     latitude: number;
     longitude: number;
     address?: string;
+  };
+
+  export interface UserContext{
+  user: User | null;
+  userData: UserData | null;
+  locationData: LocationData | null;
+  loading: boolean;
+  signOut: () => Promise<void>;
+  updateLocation: () => Promise<void>;
+  pickImage: () => Promise<string | undefined>;
+  updateUsername: (newUsername: string) => Promise<void>;
+  updateSearchRadius: (newRadius: number) => Promise<void>;
+  nearbyPlaces: GooglePlace[];
+  nextPageToken: string | null;
+  fetchNearbyPlaces: (options?: {
+    excludedTypes?: string[];
+    types?: string[];
+    pageToken?: string | null;
+  }) => Promise<{ results: GooglePlace[]; nextPageToken: string | null }>;
+  placesLoading: boolean;
+  hasMorePlaces: boolean;
   };
 
   export interface GooglePlace {

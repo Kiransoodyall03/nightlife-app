@@ -2,41 +2,22 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, db } from '../services/firebase/config';
-import { UserData, GooglePlace } from 'src/services/auth/types';
+import { UserData, GooglePlace, LocationData, UserContext, FilterData } from 'src/services/auth/types';
 import { doc, getDoc, updateDoc, GeoPoint } from 'firebase/firestore';
 import * as Location from 'expo-location';
 import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import firebase from 'firebase/app';
 
 const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 const PLACES_API = 'https://places.googleapis.com/v1/places:searchNearby';
 const storage = getStorage();
 
-type UserContextType = {
-  user: User | null;
-  userData: UserData | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-  updateLocation: () => Promise<void>;
-  pickImage: () => Promise<string | undefined>;
-  updateUsername: (newUsername: string) => Promise<void>;
-  updateSearchRadius: (newRadius: number) => Promise<void>;
-  nearbyPlaces: GooglePlace[];
-  nextPageToken: string | null;
-  fetchNearbyPlaces: (options?: {
-    excludedTypes?: string[];
-    types?: string[];
-    pageToken?: string | null;
-  }) => Promise<{ results: GooglePlace[]; nextPageToken: string | null }>;
-  placesLoading: boolean;
-  hasMorePlaces: boolean;
-};
-const UserContext = createContext<UserContextType>({
+const UserContextInstance = createContext<UserContext>({
   user: null,
   userData: null,
+  locationData: null,
   loading: true,
   signOut: async () => {},
   updateLocation: async () => {},
@@ -53,6 +34,8 @@ const UserContext = createContext<UserContextType>({
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [FilterData, setFilterData] = useState<FilterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [nearbyPlaces, setNearbyPlaces] = useState<GooglePlace[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
@@ -202,7 +185,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   }): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
     try {
       const user = auth.currentUser;
-      if (!userData?.location?.coordinates || !userData.searchRadius) {
+      const userLatitude = locationData?.latitude;
+      const userLongitude = locationData?.longitude;
+      const coordinates = [userLatitude, userLongitude];
+      if (!coordinates || !userData?.searchRadius) {
         return { results: [], nextPageToken: null };
       }
       const userDoc = await getDoc(doc(db, 'users',userData.uid));
@@ -214,13 +200,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         }
       };
       const validTypes = [
-        'bar', 
-        'night_club', 
-        'restaurant', 
-        'casino',
-        'comedy_club',
-        'event_venue',
-        'karaoke'
+       FilterData?.filters
       ];
       if (filters.length === 0) {
         filters = validTypes; 
@@ -232,8 +212,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         locationRestriction: {
           circle: {
             center: {
-              latitude: userData.location.coordinates.latitude,
-              longitude: userData.location.coordinates.longitude
+              latitude: locationData?.latitude,
+              longitude: locationData?.longitude
             },
             radius: Math.min(userData.searchRadius * 1000, 50000) // Max 50km
           }
@@ -303,18 +283,21 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       await updateDoc(doc(db, 'users', user.uid), {
-        location: {
-          address: newLocation.address,
-          coordinates: new GeoPoint(newLocation.latitude, newLocation.longitude)
-        }
+       locationId: user.uid,
       });
 
-      setUserData(prev => ({
+      await updateDoc(doc(db, 'user_locations', user.uid), {
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+        address: newLocation.address,
+      });
+
+      setLocationData(prev => ({
         ...prev!,
-        location: {
-          address: newLocation.address,
-          coordinates: new GeoPoint(newLocation.latitude, newLocation.longitude)
-        }
+        locationId: user.uid,
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+        address: newLocation.address,
       }));
     } catch (error) {
       //console.error('Update error:', error);
@@ -331,18 +314,19 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   useEffect(() => {
-    if (userData?.location.coordinates && userData?.searchRadius) {
+    if (locationData?.latitude && locationData?.longitude && userData?.searchRadius) {
       setNearbyPlaces([]);
       setNextPageToken(null);
       setHasMorePlaces(true);
       fetchNearbyPlaces();
     }
-  }, [userData?.location.coordinates, userData?.searchRadius]);
+  }, [locationData?.latitude,locationData?.longitude, userData?.searchRadius]);
 
   return (
-<UserContext.Provider
+<UserContextInstance.Provider
       value={{
         user,
+        locationData,
         userData,
         loading,
         signOut,
@@ -358,8 +342,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       }}
     >
       {children}
-    </UserContext.Provider>
+    </UserContextInstance.Provider>
   );
 };
 
-export const useUser = () => useContext(UserContext);
+export const useUser = () => useContext(UserContextInstance);

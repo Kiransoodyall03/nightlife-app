@@ -8,11 +8,12 @@ import styles from './styles';
 import { useUser } from 'src/context/UserContext';
 import { ErrorBoundary } from 'expo-router';
 import { useNotification } from 'src/components/Notification/NotificationContext';
-import { doc, DocumentSnapshot, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from 'src/services/firebase/config';
+import { GooglePlace } from 'src/services/auth/types';
 
 export default function DiscoverScreen() {
-  const { fetchNearbyPlaces, userData } = useUser();
+  const { fetchNearbyPlaces, userData, locationData } = useUser();
   const [venues, setVenues] = useState<Venue[]>([]);
   const swiperRef = useRef<Swiper<Venue> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,46 +28,51 @@ export default function DiscoverScreen() {
 
     const fetchFilters = async () => {
       try {
-        if (!userData?.filterId) return;
+        if (!userData?.uid) {
+          setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+          return;
+        }
   
-        const docRef = doc(db, 'filters', userData.filterId);
+        const docRef = doc(db, 'filters', userData.uid);
         unsubscribe = onSnapshot(docRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setUserFilters(data.isFiltered ? data.filters : ['bar','resturant','cafe','night_club']);
+            setUserFilters(data.isFiltered ? data.filters : ['bar', 'restaurant', 'cafe', 'night_club']);
+          } else {
+            setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
           }
         });
       } catch (error) {
-        setUserFilters(['bar','resturant','cafe','night_club']);
+        setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
       }
     };
   
     fetchFilters();
     return () => unsubscribe?.();
-  }, [userData?.filterId]);
+  }, [userData?.uid]);
 
-  const transformPlacesToVenues = (places: any[]): Venue[] => {
+  const transformPlacesToVenues = (places: GooglePlace[]): Venue[] => {
     return places.map(place => ({
-      id: place.id,
-      name: place.displayName?.text || 'Unnamed Venue',
-      image: place.photos?.[0]?.name 
-        ? `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=400&key=${GOOGLE_API_KEY}`
+      id: place.place_id,
+      name: place.name || 'Unnamed Venue',
+      image: place.photos?.[0]?.photo_reference 
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
         : 'https://picsum.photos/400/600',
-      description: place.formattedAddress || 'Address not available',
+      description: place.vicinity || 'Address not available',
       type: place.types?.join(', ') || 'Venue',
       rating: place.rating || 0,
       distance: calculateDistance({
-        lat: place.location?.latitude,
-        lng: place.location?.longitude
+        lat: place.geometry?.location?.lat,
+        lng: place.geometry?.location?.lng
       })
     }));
   };
 
-  const calculateDistance = useCallback((placeLocation: { lat: number, lng: number }) => {
-    if (!userData?.location) return 'N/A';
+  const calculateDistance = useCallback((placeLocation: { lat?: number, lng?: number }) => {
+    if (!locationData || !placeLocation.lat || !placeLocation.lng) return 'N/A';
     
-    const userLat = userData.location.coordinates.latitude;
-    const userLng = userData.location.coordinates.longitude;
+    const userLat = locationData.latitude;
+    const userLng = locationData.longitude;
     
     const toRad = (x: number) => x * Math.PI / 180;
     const R = 6371; // Earth radius in km
@@ -81,7 +87,7 @@ export default function DiscoverScreen() {
       
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return `${(R * c).toFixed(1)} km`;
-  }, [userData?.location]);
+  }, [locationData]);
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -94,17 +100,15 @@ export default function DiscoverScreen() {
         types: userFilters,
       });
       
-      setVenues(prev => [
-        ...transformPlacesToVenues(response.results)
-      ]);
+      setVenues(transformPlacesToVenues(response.results));
       setNextPageToken(response.nextPageToken);
       showSuccess('Venues successfully loaded');
     } catch (error) {
-     showError("Failed to initialize venues");
+      showError("Failed to initialize venues");
     } finally {
       setIsLoading(false);
     }
-  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, userFilters, userData?.location]);
+  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData]);
 
   const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore) return;
@@ -113,7 +117,7 @@ export default function DiscoverScreen() {
       setIsLoadingMore(true);
       const response = await fetchNearbyPlaces({
         pageToken: nextPageToken,
-        types:userFilters,
+        types: userFilters,
       });
       
       // Merge new results while avoiding duplicates
@@ -127,7 +131,6 @@ export default function DiscoverScreen() {
       setNextPageToken(response.nextPageToken);
       showSuccess('More venues loaded!');
     } catch (error) {
-      console.error('Load more error:', error);
       showError("Failed to load more");
     } finally {
       setIsLoadingMore(false);
@@ -135,10 +138,10 @@ export default function DiscoverScreen() {
   }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError]);
 
   useEffect(() => {
-    if (userData?.location && userFilters.length > 0) {
+    if (locationData && userFilters.length > 0) {
       loadInitialData();
     }
-  }, [userData?.location, loadInitialData, userFilters]);
+  }, [locationData, loadInitialData, userFilters]);
 
   const handleSwipedAll = useCallback(() => {
     if (nextPageToken) {
@@ -157,7 +160,7 @@ export default function DiscoverScreen() {
     console.log(`Passed: ${venues[index].name}`);
   };
 
-  if (!userData?.location) {
+  if (!locationData) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Please enable location services to discover venues</Text>
@@ -181,6 +184,7 @@ export default function DiscoverScreen() {
       </View>
     );
   }
+  
   const ErrorFallback = (props: { error: Error; resetError: () => void }) => (
     <View style={styles.container}>
       <Text>Something went wrong:</Text>
@@ -188,9 +192,10 @@ export default function DiscoverScreen() {
       <Button title="Try again" onPress={props.resetError} />
     </View>
   );
+  
   return (
     <View style={styles.cardsContainer}>
-      {<Swiper
+      <Swiper
         ref={swiperRef}
         cards={venues}
         renderCard={(venue) => venue && (
@@ -213,7 +218,7 @@ export default function DiscoverScreen() {
         animateCardOpacity
         swipeBackCard
         containerStyle={styles.swiper}
-      />}
+      />
       {isLoadingMore && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" />

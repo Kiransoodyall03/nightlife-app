@@ -7,9 +7,12 @@ import { Feather } from '@expo/vector-icons';
 import { auth, db } from '../../../src/services/firebase/config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNotification } from 'src/components/Notification/NotificationContext';
+import { UserData, LocationData } from 'src/services/auth/types';
+import { useAuth } from 'src/services/auth/useAuth';
 
 const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
-  const { user, userData, signOut, updateLocation, pickImage, updateSearchRadius, updateUsername } = useUser();
+  const { user, userData, locationData, signOut, updateLocation, pickImage, updateSearchRadius, updateUsername } = useUser();
+  const { loading: authLoading, error: authError } = useAuth();
   const [newUsername, setNewUsername] = useState(userData?.username || '');
   const [newSearchRadius, setNewSearchRadius] = useState(userData?.searchRadius?.toString() || '5');
   const [editingUsername, setEditingUsername] = useState(false);
@@ -26,18 +29,18 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         
         if (userDoc.exists()) {
-          const data = userDoc.data();
+          const data = userDoc.data() as UserData;
           setNewUsername(data?.username || '');
           setNewSearchRadius(data?.searchRadius?.toString() || '5');
         } else {
           // Initialize new user document
           await setDoc(doc(db, 'users', user.uid), {
             username: 'New User',
-            email: user.email,
+            email: user.email || '',
             searchRadius: 5,
+            uid: user.uid,
             createdAt: new Date(),
             profilePicture: '',
-            location: null
           });
           setNewUsername('New User');
         }
@@ -77,7 +80,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     }
   };
 
- const handleUpdateSearchRadius = async () => {
+  const handleUpdateSearchRadius = async () => {
     try {
       const radius = parseInt(newSearchRadius);
       if (isNaN(radius) || radius < 1 || radius > 100) {
@@ -93,7 +96,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -101,10 +104,10 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     );
   }
 
-  if (error) {
+  if (error || authError) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>{error || authError}</Text>
         <TouchableOpacity onPress={() => setError('')}>
           <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
@@ -114,8 +117,8 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
 
   return (
     <ScrollView
-    contentContainerStyle = {styles.container}
-      showsVerticalScrollIndicator = {false}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
     >
       {/* Background Header */}
       <Image 
@@ -172,14 +175,14 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
       <View style={styles.settingsSection}>
         <View style={styles.settingItem}>
           <Text style={styles.settingText}>
-            {userData?.location?.address || 'Location not available'}
+            {locationData?.address || 'Location not available'}
           </Text>
           <TouchableOpacity
             style={styles.recalibrateButton}
             onPress={updateLocation}
           >
             <Text style={styles.recalibrateButtonText}>
-              {userData?.location?.address ? 
+              {locationData?.address ? 
                 'Update Location' : 
                 'Enable Location'}
             </Text>
