@@ -32,17 +32,6 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
           const data = userDoc.data() as UserData;
           setNewUsername(data?.username || '');
           setNewSearchRadius(data?.searchRadius?.toString() || '5');
-        } else {
-          // Initialize new user document
-          await setDoc(doc(db, 'users', user.uid), {
-            username: 'New User',
-            email: user.email || '',
-            searchRadius: 5,
-            uid: user.uid,
-            createdAt: new Date(),
-            profilePicture: '',
-          });
-          setNewUsername('New User');
         }
       } catch (err) {
         setError('Failed to load profile data');
@@ -161,7 +150,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
             </>
           ) : (
             <>
-              <Text style={styles.name}>{userData?.username || 'User'}</Text>
+              <Text style={styles.name}>{userData?.username}</Text>
               <TouchableOpacity onPress={() => setEditingUsername(true)}>
                 <Feather name="edit-2" size={20} color="#666" />
               </TouchableOpacity>

@@ -20,6 +20,7 @@ export interface FirebaseAuthError extends Error {
     searchRadius: number;
     uid: string;
     createdAt: Date;
+    filterId: any;
   }
   
   export interface GroupData{

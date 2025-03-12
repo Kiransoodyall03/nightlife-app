@@ -184,36 +184,40 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     pageToken?: string | null;
   }): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
     try {
-      const user = auth.currentUser;
+      setPlacesLoading(true);
       const userLatitude = locationData?.latitude;
       const userLongitude = locationData?.longitude;
-      const coordinates = [userLatitude, userLongitude];
-      if (!coordinates || !userData?.searchRadius) {
+      
+      if (!userLatitude || !userLongitude || !userData?.searchRadius) {
         return { results: [], nextPageToken: null };
       }
-      const userDoc = await getDoc(doc(db, 'users',userData.uid));
-      let filters = [];
-      if(userDoc.exists() && userDoc.data().filterId){
-        const filterDoc = await getDoc(doc(db,'filters', userDoc.data().filterId));
-        if (filterDoc.exists()){
-          filters = filterDoc.data().filters;
+      
+      // Default types if not specified
+      let requestTypes = options?.types || ['bar', 'restaurant', 'cafe', 'night_club'];
+      
+      // If types are not specified, try to get from user's filter
+      if (!options?.types && userData?.filterId) {
+        try {
+          const filterDoc = await getDoc(doc(db, 'filters', userData.filterId));
+          if (filterDoc.exists()) {
+            const filterData = filterDoc.data() as FilterData;
+            if (filterData.isFiltered && filterData.filters.length > 0) {
+              requestTypes = filterData.filters;
+            }
+          }
+        } catch (error) {
+          console.log("Error fetching filter data:", error);
         }
-      };
-      const validTypes = [
-       FilterData?.filters
-      ];
-      if (filters.length === 0) {
-        filters = validTypes; 
       }
-
+  
       const requestBody = {
-        includedTypes: options?.types?.length ? options.types : filters,
+        includedTypes: requestTypes,
         maxResultCount: 20,
         locationRestriction: {
           circle: {
             center: {
-              latitude: locationData?.latitude,
-              longitude: locationData?.longitude
+              latitude: userLatitude,
+              longitude: userLongitude
             },
             radius: Math.min(userData.searchRadius * 1000, 50000) // Max 50km
           }
@@ -227,14 +231,27 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           'X-Goog-Api-Key': GOOGLE_API_KEY,
           'X-Android-Package':'com.KiranAman.nightlifeapp',
           'X-Android-Cert':'8F:15:A1:E9:BF:EF:63:A9:8B:09:7D:CB:19:52:2C:55:37:F3:D4:24',
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types,places.rating,places.photos,places.location',
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types,places.rating,places.photos,places.location,places.nextPageToken',
         }
       });
   
       if (response.data?.places) {
         const filteredResults = response.data.places.filter((place: any) => 
           !place.types?.some((type: string) => options?.excludedTypes?.includes(type))
-        );
+        ).map((place: any) => ({
+          place_id: place.id,
+          name: place.displayName?.text || place.name || 'Unnamed Venue',
+          types: place.types || [],
+          vicinity: place.formattedAddress || 'Address not available',
+          rating: place.rating || 0,
+          geometry: {
+            location: {
+              lat: place.location?.latitude || 0,
+              lng: place.location?.longitude || 0
+            }
+          },
+          photos: place.photos?.map((photo: any) => ({ photo_reference: photo.name })) || []
+        }));
         
         return {
           results: filteredResults,
@@ -246,11 +263,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       
     } catch (error) {
       if (axios.isAxiosError(error)) {
-       // console.error('API Error:', error.response?.data || error.message);
+        console.log('API Error:', error.response?.data || error.message);
       } else {
-       // console.error('API Error:', error);
+        console.log('API Error:', error);
       }
       return { results: [], nextPageToken: null };
+    } finally {
+      setPlacesLoading(false);
     }
   };
 

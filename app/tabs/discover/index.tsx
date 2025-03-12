@@ -23,33 +23,36 @@ export default function DiscoverScreen() {
   const [userFilters, setUserFilters] = useState<string[]>([]);
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
-  useEffect(() => {
-    let unsubscribe: () => void;
+// In DiscoverScreen.tsx, update the fetchFilters function:
+useEffect(() => {
+  let unsubscribe: () => void;
 
-    const fetchFilters = async () => {
-      try {
-        if (!userData?.uid) {
-          setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
-          return;
-        }
-  
-        const docRef = doc(db, 'filters', userData.uid);
-        unsubscribe = onSnapshot(docRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setUserFilters(data.isFiltered ? data.filters : ['bar', 'restaurant', 'cafe', 'night_club']);
-          } else {
-            setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
-          }
-        });
-      } catch (error) {
+  const fetchFilters = async () => {
+    try {
+      if (!userData?.uid || !userData?.filterId) {
         setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+        return;
       }
-    };
-  
-    fetchFilters();
-    return () => unsubscribe?.();
-  }, [userData?.uid]);
+
+      // Use the filterId from the userData instead of the uid
+      const docRef = doc(db, 'filters', userData.filterId);
+      unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUserFilters(data.isFiltered ? data.filters : ['bar', 'restaurant', 'cafe', 'night_club']);
+        } else {
+          setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+        }
+      });
+    } catch (error) {
+      console.log("Filter fetch error:", error);
+      setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+    }
+  };
+
+  fetchFilters();
+  return () => unsubscribe?.();
+}, [userData?.uid, userData?.filterId]); // Add filterId as dependency
 
   const transformPlacesToVenues = (places: GooglePlace[]): Venue[] => {
     return places.map(place => ({
@@ -89,28 +92,34 @@ export default function DiscoverScreen() {
     return `${(R * c).toFixed(1)} km`;
   }, [locationData]);
 
-  const loadInitialData = useCallback(async () => {
-    try {
-      if (!userFilters.length) {
-        showError('No filters available. Please set preferences first.');
-        return;
-      }
-      setIsLoading(true);
-      const response = await fetchNearbyPlaces({
-        types: userFilters,
-      });
-      
+// In loadInitialData function, update the notification handling:
+const loadInitialData = useCallback(async () => {
+  try {
+    if (!userFilters.length) {
+      showError('No filters available. Please set preferences first.');
+      return;
+    }
+    setIsLoading(true);
+    const response = await fetchNearbyPlaces({
+      types: userFilters,
+    });
+    
+    if (response.results.length === 0) {
+      showError('No venues found matching your filters. Try adjusting your preferences.');
+      setVenues([]);
+    } else {
       setVenues(transformPlacesToVenues(response.results));
       setNextPageToken(response.nextPageToken);
-      showSuccess('Venues successfully loaded');
-    } catch (error) {
-      showError("Failed to initialize venues");
-    } finally {
-      setIsLoading(false);
+      showSuccess('Venues loaded successfully');
     }
-  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData]);
-
-  const loadMoreData = useCallback(async () => {
+  } catch (error) {
+    showError("Failed to load venues. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+}, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData]);
+  
+const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore) return;
   
     try {
