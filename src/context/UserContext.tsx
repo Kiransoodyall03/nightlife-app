@@ -35,7 +35,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [locationData, setLocationData] = useState<LocationData | null>(null);
-  const [FilterData, setFilterData] = useState<FilterData | null>(null);
+  const [filterData, setFilterData] = useState<FilterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [nearbyPlaces, setNearbyPlaces] = useState<GooglePlace[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
@@ -178,100 +178,145 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const fetchNearbyPlaces = async (options?: {
-    excludedTypes?: string[];
-    types?: string[];
-    pageToken?: string | null;
-  }): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
-    try {
-      setPlacesLoading(true);
-      const userLatitude = locationData?.latitude;
-      const userLongitude = locationData?.longitude;
-      
-      if (!userLatitude || !userLongitude || !userData?.searchRadius) {
-        return { results: [], nextPageToken: null };
-      }
-      
-      // Default types if not specified
-      let requestTypes = options?.types || ['bar', 'restaurant', 'cafe', 'night_club'];
-      
-      // If types are not specified, try to get from user's filter
-      if (!options?.types && userData?.filterId) {
-        try {
-          const filterDoc = await getDoc(doc(db, 'filters', userData.filterId));
-          if (filterDoc.exists()) {
-            const filterData = filterDoc.data() as FilterData;
-            if (filterData.isFiltered && filterData.filters.length > 0) {
-              requestTypes = filterData.filters;
-            }
+const fetchNearbyPlaces = async (options?: {
+  excludedTypes?: string[];
+  types?: string[];
+  pageToken?: string | null;
+}): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
+  try {
+    setPlacesLoading(true);
+    const userLatitude = locationData?.latitude;
+    const userLongitude = locationData?.longitude;
+
+    if (!userLatitude || !userLongitude || !userData?.searchRadius) {
+      console.log("Missing location data or search radius");
+      return { results: [], nextPageToken: null };
+    }
+
+    // If we have a cooldown active and this isn't a pagination request, prevent the request
+    if (cooldown && !options?.pageToken) {
+      console.log("Request throttled due to cooldown");
+      return { results: [], nextPageToken: null };
+    }
+
+    // Set a brief cooldown to prevent rapid repeated requests
+    if (!options?.pageToken) {
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 2000);
+    }
+
+    // Default types if not provided
+    let requestTypes = options?.types || ['bar', 'restaurant', 'cafe', 'night_club'];
+    
+    // Check user filter from Firestore if available
+    if (!options?.types && userData?.filterId && userData.filterId !== "") {
+      try {
+        const filterDoc = await getDoc(doc(db, 'filters', userData.filterId));
+        if (filterDoc.exists()) {
+          const filterData = filterDoc.data() as FilterData;
+          if (filterData.isFiltered && Array.isArray(filterData.filters) && filterData.filters.length > 0) {
+            requestTypes = filterData.filters;
+            console.log("Using filter types:", requestTypes);
           }
-        } catch (error) {
-          console.log("Error fetching filter data:", error);
         }
+      } catch (error) {
+        console.error("Error fetching filter data:", error);
       }
-  
-      const requestBody = {
-        includedTypes: requestTypes,
-        maxResultCount: 20,
-        locationRestriction: {
-          circle: {
-            center: {
-              latitude: userLatitude,
-              longitude: userLongitude
-            },
-            radius: Math.min(userData.searchRadius * 1000, 50000) // Max 50km
+    }
+
+    console.log("Requesting places with types:", requestTypes);
+    
+    // Build parameters for backend request
+    const locationParam = `${userLatitude},${userLongitude}`;
+    const radius = Math.min(userData.searchRadius * 1000, 50000); // Max 50km
+    
+    const params = {
+      location: locationParam,
+      radius,
+      types: requestTypes.join('|'),
+      key: GOOGLE_API_KEY,
+      ...(options?.pageToken && { pagetoken: options.pageToken })
+    };
+
+    // Add retry logic for more reliable API calls
+    let retries = 0;
+    const maxRetries = 3;
+    let response;
+    
+    while (retries < maxRetries) {
+      try {
+        // If this is a page token request, add a small delay
+        // This helps with Google's API which sometimes needs time to process page tokens
+        if (options?.pageToken && retries === 0) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        
+        response = await axios.get('http://localhost:5000/api/places', { 
+          params,
+          timeout: 10000 // 10 second timeout
+        });
+        
+        // If we get here, the request succeeded
+        break;
+      } catch (error) {
+        retries++;
+        console.error(`API request failed (attempt ${retries}/${maxRetries}):`, 
+          axios.isAxiosError(error) ? error.message : error);
+          
+        if (retries >= maxRetries) {
+          throw error;
+        }
+        
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+      }
+    }
+    
+    if (response?.data?.results) {
+      // Update the hasMorePlaces state based on the response
+      setHasMorePlaces(!!response.data.next_page_token);
+      setNextPageToken(response.data.next_page_token || null);
+      
+      const filteredResults = response.data.results.filter((place: any) =>
+        !place.types?.some((type: string) => options?.excludedTypes?.includes(type))
+      ).map((place: any) => ({
+        place_id: place.place_id,
+        name: place.name || 'Unnamed Venue',
+        types: place.types || [],
+        vicinity: place.vicinity || 'Address not available',
+        rating: place.rating || 0,
+        geometry: {
+          location: {
+            lat: place.geometry?.location?.lat || 0,
+            lng: place.geometry?.location?.lng || 0
           }
         },
-        ...(options?.pageToken && { pageToken: options.pageToken })
-      };
-  
-      const response = await axios.post(PLACES_API, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_API_KEY,
-          'X-Android-Package':'com.KiranAman.nightlifeapp',
-          'X-Android-Cert':'8F:15:A1:E9:BF:EF:63:A9:8B:09:7D:CB:19:52:2C:55:37:F3:D4:24',
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types,places.rating,places.photos,places.location,places.nextPageToken',
-        }
-      });
-  
-      if (response.data?.places) {
-        const filteredResults = response.data.places.filter((place: any) => 
-          !place.types?.some((type: string) => options?.excludedTypes?.includes(type))
-        ).map((place: any) => ({
-          place_id: place.id,
-          name: place.displayName?.text || place.name || 'Unnamed Venue',
-          types: place.types || [],
-          vicinity: place.formattedAddress || 'Address not available',
-          rating: place.rating || 0,
-          geometry: {
-            location: {
-              lat: place.location?.latitude || 0,
-              lng: place.location?.longitude || 0
-            }
-          },
-          photos: place.photos?.map((photo: any) => ({ photo_reference: photo.name })) || []
-        }));
-        
-        return {
-          results: filteredResults,
-          nextPageToken: response.data.nextPageToken || null
-        };
-      }
-  
-      return { results: [], nextPageToken: null };
+        photos: place.photos?.map((photo: any) => ({
+          photo_reference: photo.photo_reference
+        })) || []
+      }));
       
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.log('API Error:', error.response?.data || error.message);
-      } else {
-        console.log('API Error:', error);
-      }
-      return { results: [], nextPageToken: null };
-    } finally {
-      setPlacesLoading(false);
+      console.log(`Found ${filteredResults.length} venues after filtering`);
+      
+      return {
+        results: filteredResults,
+        nextPageToken: response.data.next_page_token || null
+      };
     }
-  };
+    
+    return { results: [], nextPageToken: null };
+    
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('API Error:', error.response?.data || error.message);
+    } else {
+      console.error('API Error:', error);
+    }
+    return { results: [], nextPageToken: null };
+  } finally {
+    setPlacesLoading(false);
+  }
+};
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

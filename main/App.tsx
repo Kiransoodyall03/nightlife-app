@@ -123,27 +123,11 @@ function TabNavigator() {
           ),
         }}
       />
-      <Tab.Screen
-      name='Filters'
-      component={FilterScreen}
-      options={{
-        headerTitle: () => <TitleComponent text="Filters" />,
-        tabBarIcon: ({ focused }) => (
-          <Image
-            source={require('@assets/icons/profile-icon.png')}
-            style={styles.tabIcon}
-          />
-        ),
-      }}
-      />
     </Tab.Navigator>
   );
 }
 
 function DrawerNavigator() {
-  const handleLogout = () => {
-    //console.log('Logging out...');
-  };
 
   return (
     <Drawer.Navigator

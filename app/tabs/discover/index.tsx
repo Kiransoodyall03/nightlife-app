@@ -6,7 +6,6 @@ import { Venue } from '../../../src/components/VenueCard';
 import Button from 'src/components/Button';
 import styles from './styles';
 import { useUser } from 'src/context/UserContext';
-import { ErrorBoundary } from 'expo-router';
 import { useNotification } from 'src/components/Notification/NotificationContext';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from 'src/services/firebase/config';
@@ -21,40 +20,88 @@ export default function DiscoverScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { showSuccess, showError } = useNotification();
   const [userFilters, setUserFilters] = useState<string[]>([]);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+  
+  // Track existing venue IDs to prevent duplicates
+  const venueIdsRef = useRef(new Set<string>());
 
-// In DiscoverScreen.tsx, update the fetchFilters function:
-useEffect(() => {
-  let unsubscribe: () => void;
-
-  const fetchFilters = async () => {
-    try {
-      if (!userData?.uid || !userData?.filterId) {
-        setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
-        return;
-      }
-
-      // Use the filterId from the userData instead of the uid
-      const docRef = doc(db, 'filters', userData.filterId);
-      unsubscribe = onSnapshot(docRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setUserFilters(data.isFiltered ? data.filters : ['bar', 'restaurant', 'cafe', 'night_club']);
-        } else {
+  // Filter fetching effect with improved comparison
+  useEffect(() => {
+    let unsubscribe: () => void;
+    let isSubscribed = true;
+  
+    const fetchFilters = async () => {
+      try {
+        if (!userData?.uid || !userData?.filterId) {
+          if (isSubscribed) {
+            setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+          }
+          return;
+        }
+  
+        const docRef = doc(db, 'filters', userData.filterId);
+        unsubscribe = onSnapshot(docRef, (docSnap) => {
+          if (!isSubscribed) return;
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const newFilters = data.isFiltered ? data.filters : ['bar', 'restaurant', 'cafe', 'night_club'];
+            
+            // Only update if filters have really changed
+            if (JSON.stringify(userFilters) !== JSON.stringify(newFilters)) {
+              setUserFilters(newFilters);
+              // Reset when filters change
+              if (initialLoadDone) {
+                resetAndReloadVenues();
+              }
+            }
+          } else {
+            setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+          }
+        });
+      } catch (error) {
+        console.error("Filter fetch error:", error);
+        if (isSubscribed) {
           setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
         }
-      });
-    } catch (error) {
-      console.log("Filter fetch error:", error);
-      setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
-    }
-  };
+      }
+    };
+  
+    fetchFilters();
+    
+    return () => {
+      isSubscribed = false;
+      unsubscribe?.();
+    };
+  }, [userData?.uid, userData?.filterId]);
 
-  fetchFilters();
-  return () => unsubscribe?.();
-}, [userData?.uid, userData?.filterId]); // Add filterId as dependency
+  // Reset function for filters change
+  const resetAndReloadVenues = useCallback(() => {
+    setVenues([]);
+    setNextPageToken(null);
+    venueIdsRef.current.clear();
+    setInitialLoadDone(false);
+  }, []);
 
-  const transformPlacesToVenues = (places: GooglePlace[]): Venue[] => {
+  const calculateDistance = useCallback((placeLocation: { lat?: number, lng?: number }) => {
+    if (!locationData || !placeLocation.lat || !placeLocation.lng) return 'N/A';
+    
+    const userLat = locationData.latitude;
+    const userLng = locationData.longitude;
+    const toRad = (x: number) => x * Math.PI / 180;
+    const R = 6371; // Earth radius in km
+    const dLat = toRad(placeLocation.lat - userLat);
+    const dLon = toRad(placeLocation.lng - userLng);
+    const a = Math.sin(dLat/2) ** 2 +
+              Math.cos(toRad(userLat)) * Math.cos(toRad(placeLocation.lat)) *
+              Math.sin(dLon/2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return `${(R * c).toFixed(1)} km`;
+  }, [locationData]);
+
+  const transformPlacesToVenues = useCallback((places: GooglePlace[]): Venue[] => {
     return places.map(place => ({
       id: place.place_id,
       name: place.name || 'Unnamed Venue',
@@ -69,104 +116,155 @@ useEffect(() => {
         lng: place.geometry?.location?.lng
       })
     }));
-  };
+  }, [GOOGLE_API_KEY, calculateDistance]);
 
-  const calculateDistance = useCallback((placeLocation: { lat?: number, lng?: number }) => {
-    if (!locationData || !placeLocation.lat || !placeLocation.lng) return 'N/A';
-    
-    const userLat = locationData.latitude;
-    const userLng = locationData.longitude;
-    
-    const toRad = (x: number) => x * Math.PI / 180;
-    const R = 6371; // Earth radius in km
 
-    const dLat = toRad(placeLocation.lat - userLat);
-    const dLon = toRad(placeLocation.lng - userLng);
-    
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(toRad(userLat)) * Math.cos(toRad(placeLocation.lat)) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
+  const loadInitialData = useCallback(async () => {
+    try {
+      if (!userFilters.length) {
+        showError('No filters available. Please set preferences first.');
+        setIsLoading(false);
+        return;
+      }
+      if (!locationData?.latitude || !locationData?.longitude) {
+        showError('Location data is not available.');
+        setIsLoading(false);
+        return;
+      }
       
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return `${(R * c).toFixed(1)} km`;
-  }, [locationData]);
-
-// In loadInitialData function, update the notification handling:
-const loadInitialData = useCallback(async () => {
-  try {
-    if (!userFilters.length) {
-      showError('No filters available. Please set preferences first.');
-      return;
-    }
-    setIsLoading(true);
-    const response = await fetchNearbyPlaces({
-      types: userFilters,
-    });
-    
-    if (response.results.length === 0) {
-      showError('No venues found matching your filters. Try adjusting your preferences.');
+      setIsLoading(true);
+      console.log("Loading venues with filters:", userFilters);
+      
+      // Clear existing venues and tracking
       setVenues([]);
-    } else {
-      setVenues(transformPlacesToVenues(response.results));
-      setNextPageToken(response.nextPageToken);
-      showSuccess('Venues loaded successfully');
+      venueIdsRef.current.clear();
+      
+      const response = await fetchNearbyPlaces({ types: userFilters });
+      
+      if (response.results.length === 0) {
+        showError('No venues found matching your filters. Try adjusting your preferences.');
+        setVenues([]);
+      } else {
+        const transformedVenues = transformPlacesToVenues(response.results);
+        console.log(`Successfully loaded ${transformedVenues.length} venues`);
+        
+        // Track IDs to prevent duplicates
+        transformedVenues.forEach(venue => venueIdsRef.current.add(venue.id));
+        
+        setVenues(transformedVenues);
+        setNextPageToken(response.nextPageToken);
+        showSuccess('Venues loaded successfully');
+      }
+      
+      setInitialLoadDone(true);
+    } catch (error) {
+      console.error("Error loading venues:", error);
+      showError("Failed to load venues. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    showError("Failed to load venues. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-}, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData]);
-  
-const loadMoreData = useCallback(async () => {
+  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData, transformPlacesToVenues]);
+
+  // Only trigger the initial load once (or when locationData changes)
+  useEffect(() => {
+    if (locationData && userFilters.length > 0 && !initialLoadDone) {
+      console.log("Calling loadInitialData from useEffect");
+      loadInitialData();
+    }
+  }, [locationData, userFilters, initialLoadDone, loadInitialData]);
+
+  const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore) return;
   
     try {
       setIsLoadingMore(true);
+      
+      // Add small delay for Google API pagination to be ready
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const response = await fetchNearbyPlaces({
         pageToken: nextPageToken,
         types: userFilters,
       });
       
-      // Merge new results while avoiding duplicates
-      setVenues(prev => {
-        const newVenues = response.results.filter(newPlace => 
-          !prev.some(existingPlace => existingPlace.id === newPlace.place_id)
-        );
-        return [...prev, ...transformPlacesToVenues(newVenues)];
-      });
+      if (response.results.length === 0) {
+        setNextPageToken(null);
+        showError('No more venues available');
+        return;
+      }
       
+      // Filter out duplicates using our tracking Set
+      const newPlaces = response.results.filter(place => 
+        !venueIdsRef.current.has(place.place_id)
+      );
+      
+      if (newPlaces.length === 0) {
+        // If we got only duplicates, try to get the next page
+        if (response.nextPageToken) {
+          setNextPageToken(response.nextPageToken);
+          setIsLoadingMore(false);
+          loadMoreData(); // Recursively try next page
+          return;
+        } else {
+          showError('No new venues found');
+          setNextPageToken(null);
+          return;
+        }
+      }
+      
+      const newVenues = transformPlacesToVenues(newPlaces);
+      
+      // Add new IDs to our tracking set
+      newVenues.forEach(venue => venueIdsRef.current.add(venue.id));
+      
+      setVenues(prev => [...prev, ...newVenues]);
       setNextPageToken(response.nextPageToken);
-      showSuccess('More venues loaded!');
+      
+      if (newVenues.length > 0) {
+        showSuccess(`Loaded ${newVenues.length} more venues!`);
+      }
     } catch (error) {
-      showError("Failed to load more");
+      console.error("Error loading more venues:", error);
+      showError("Failed to load more venues. Please try again.");
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError]);
-
-  useEffect(() => {
-    if (locationData && userFilters.length > 0) {
-      loadInitialData();
-    }
-  }, [locationData, loadInitialData, userFilters]);
+  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError, transformPlacesToVenues]);
 
   const handleSwipedAll = useCallback(() => {
     if (nextPageToken) {
-      loadMoreData();
-      swiperRef.current?.jumpToCardIndex(0);
+      loadMoreData().then(() => {
+        // Only jump to index 0 if we have venues
+        if (venues.length > 0) {
+          // Small delay to make sure new cards are rendered
+          setTimeout(() => {
+            if (swiperRef.current) {
+              swiperRef.current.jumpToCardIndex(0);
+            }
+          }, 300);
+        }
+      });
     } else {
       showError('No more venues in your area');
     }
-  }, [nextPageToken, loadMoreData, showError]);
+  }, [nextPageToken, loadMoreData, showError, venues.length]);
+
+  const refreshVenues = useCallback(() => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    resetAndReloadVenues();
+    setIsRefreshing(false);
+  }, [isRefreshing, resetAndReloadVenues]);
 
   const handleSwipedRight = (index: number) => {
     console.log(`Liked: ${venues[index].name}`);
+    // Here you would implement your "like" logic
   };
 
   const handleSwipedLeft = (index: number) => {
     console.log(`Passed: ${venues[index].name}`);
+    // Here you would implement your "dislike" logic
   };
 
   if (!locationData) {
@@ -186,10 +284,11 @@ const loadMoreData = useCallback(async () => {
     );
   }
 
-  if (venues.length === 0) {
+  if (venues.length === 0 && initialLoadDone) {
     return (
       <View style={styles.LoadingContainer}>
-        <Text>No venues found in your area.</Text>
+        <Text>No venues found in your area with your current filters.</Text>
+        <Button title="Refresh" onPress={refreshVenues} />
       </View>
     );
   }
@@ -218,7 +317,7 @@ const loadMoreData = useCallback(async () => {
         onSwipedRight={handleSwipedRight}
         onSwipedLeft={handleSwipedLeft}
         onSwipedAll={handleSwipedAll}
-        infinite={!nextPageToken}
+        infinite={false} // Changed to false for better control over pagination
         backgroundColor={'transparent'}
         stackSize={4}
         stackScale={10}
@@ -227,6 +326,9 @@ const loadMoreData = useCallback(async () => {
         animateCardOpacity
         swipeBackCard
         containerStyle={styles.swiper}
+        cardIndex={0}
+        cardVerticalMargin={10}
+        cardHorizontalMargin={10}
       />
       {isLoadingMore && (
         <View style={styles.loadingOverlay}>
