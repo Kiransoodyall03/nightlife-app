@@ -7,13 +7,14 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent', // Transparent background
+    backgroundColor: '#FFFFFF', // Transparent background
     borderWidth: 2,
   },
   
   // Variant styles
   primaryButton: {
     borderColor: '#007AFF',
+
   },
   secondaryButton: {
     borderColor: '#6C757D',
@@ -24,7 +25,14 @@ export default StyleSheet.create({
   dangerButton: {
     borderColor: '#DC3545',
   },
-
+  circleButton: {
+    borderRadius: 30,
+    width: 60,
+    height: 60,
+    padding: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   // Size styles - making them square to ensure circle shape
   smallButton: {
     width: 40,
@@ -56,6 +64,9 @@ export default StyleSheet.create({
   },
   dangerText: {
     color: '#DC3545',
+  },
+  circleText: {
+    color: '#FFFFFF',
   },
 
   // Text size styles

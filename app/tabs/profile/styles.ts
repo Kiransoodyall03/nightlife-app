@@ -57,6 +57,18 @@ export default StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Jaldi-Regular',
   },
+  filterButton: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  filterButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Jaldi-Regular',
+  },
   profileImage: {
     width: 125,
     height: 125,

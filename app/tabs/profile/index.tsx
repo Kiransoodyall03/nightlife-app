@@ -53,6 +53,10 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     }
   };
 
+  const NavigateToFilters = async () => {
+    navigation.navigate('Filter')
+  }
+
   const handleUpdateUsername = async () => {
     try {
       if (!user) throw new Error('Not authenticated');
@@ -111,7 +115,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     >
       {/* Background Header */}
       <Image 
-        source={require('../../../assets/background-art/blue-background.jpg')}
+        source={require('../../../assets/background-art/background_profile.jpeg')}
         style={styles.backgroundHeader}
       />
 
@@ -170,11 +174,19 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
             style={styles.recalibrateButton}
             onPress={updateLocation}
           >
+            
             <Text style={styles.recalibrateButtonText}>
               {locationData?.address ? 
                 'Update Location' : 
                 'Enable Location'}
             </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={NavigateToFilters}
+          >
+            
+            <Text style={styles.filterButtonText}> Update Filters</Text>
           </TouchableOpacity>
         </View>
 
