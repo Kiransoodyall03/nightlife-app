@@ -2,71 +2,22 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, db } from '../services/firebase/config';
+import { UserData, GooglePlace, LocationData, UserContext, FilterData } from 'src/services/auth/types';
 import { doc, getDoc, updateDoc, GeoPoint } from 'firebase/firestore';
 import * as Location from 'expo-location';
 import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import firebase from 'firebase/app';
 
 const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 const PLACES_API = 'https://places.googleapis.com/v1/places:searchNearby';
 const storage = getStorage();
 
-interface UserData {
-  username: string;
-  email: string;
-  profilePicture?: string;
-  location: {
-    address: string;
-    coordinates: {
-      latitude: number;
-      longitude: number;
-    };
-  };
-  searchRadius: number;
-  uid: string;
-  createdAt: Date;
-}
-interface GooglePlace {
-  place_id: string;
-  name: string;
-  types: string[];
-  vicinity: string;
-  rating?: number;
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
-  photos?: Array<{
-    photo_reference: string;
-  }>;
-}
-type UserContextType = {
-  user: User | null;
-  userData: UserData | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-  updateLocation: () => Promise<void>;
-  pickImage: () => Promise<string | undefined>;
-  updateUsername: (newUsername: string) => Promise<void>;
-  updateSearchRadius: (newRadius: number) => Promise<void>;
-  nearbyPlaces: GooglePlace[];
-  nextPageToken: string | null;
-  fetchNearbyPlaces: (options?: {
-    excludedTypes?: string[];
-    types?: string[];
-    pageToken?: string | null;
-  }) => Promise<{ results: GooglePlace[]; nextPageToken: string | null }>;
-  placesLoading: boolean;
-  hasMorePlaces: boolean;
-};
-const UserContext = createContext<UserContextType>({
+const UserContextInstance = createContext<UserContext>({
   user: null,
   userData: null,
+  locationData: null,
   loading: true,
   signOut: async () => {},
   updateLocation: async () => {},
@@ -83,52 +34,15 @@ const UserContext = createContext<UserContextType>({
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [filterData, setFilterData] = useState<FilterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [nearbyPlaces, setNearbyPlaces] = useState<GooglePlace[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [hasMorePlaces, setHasMorePlaces] = useState(true);
   const [cooldown, setCooldown] = useState(false);
-  const VALID_TYPES = [
-    'bar', 
-    'night_club',
-    'restaurant',
-    'meal_takeaway', // Instead of generic 'food'
-    'sports_bar'
-  ];
 
-  const uploadProfilePicture = async (uri: string) => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const storageRef = ref(storage, `profile-pictures/${user.uid}`);
-
-      await uploadBytes(storageRef, blob);
-
-      const downloadURL = await getDownloadURL(storageRef);
-
-      await updateDoc(doc(db, 'users', user.uid), {
-        profilePicture: downloadURL
-      });
-
-      setUserData(prev => ({
-        ...prev!,
-        profilePicture: downloadURL
-      }));
-
-      return downloadURL;
-    } catch (error) {
-      console.error('Upload error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
   const updateUsername = async (newUsername: string) => {
     if (!user) return;
 
@@ -190,7 +104,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.9,
+        quality: 1,
       });
   
       if (!result.canceled && result.assets[0].uri) {
@@ -264,74 +178,145 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const fetchNearbyPlaces = async (options?: {
-    excludedTypes?: string[];
-    types?: string[];
-    pageToken?: string | null;
-  }): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
-    try {
-      if (!userData?.location?.coordinates || !userData.searchRadius) {
-        return { results: [], nextPageToken: null };
-      }
-  
-      // Use valid place types from new API
-      const validTypes = [
-        'bar', 
-        'night_club', 
-        'restaurant', 
-        'casino',
-        'comedy_club',
-        'event_venue',
-        'karaoke'
-      ];
-  
-      const requestBody = {
-        includedTypes: options?.types?.length ? options.types : validTypes,
-        maxResultCount: 20,
-        locationRestriction: {
-          circle: {
-            center: {
-              latitude: userData.location.coordinates.latitude,
-              longitude: userData.location.coordinates.longitude
-            },
-            radius: Math.min(userData.searchRadius * 1000, 50000) // Max 50km
-          }
-        },
-        ...(options?.pageToken && { pageToken: options.pageToken })
-      };
-  
-      const response = await axios.post(PLACES_API, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_API_KEY,
-          'X-Android-Package':'com.KiranAman.nightlifeapp',
-          'X-Android-Cert':'8F:15:A1:E9:BF:EF:63:A9:8B:09:7D:CB:19:52:2C:55:37:F3:D4:24',
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types,places.rating,places.photos,places.location',
-        }
-      });
-  
-      if (response.data?.places) {
-        const filteredResults = response.data.places.filter((place: any) => 
-          !place.types?.some((type: string) => options?.excludedTypes?.includes(type))
-        );
-        
-        return {
-          results: filteredResults,
-          nextPageToken: response.data.nextPageToken || null
-        };
-      }
-  
-      return { results: [], nextPageToken: null };
-      
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-       // console.error('API Error:', error.response?.data || error.message);
-      } else {
-       // console.error('API Error:', error);
-      }
+const fetchNearbyPlaces = async (options?: {
+  excludedTypes?: string[];
+  types?: string[];
+  pageToken?: string | null;
+}): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
+  try {
+    setPlacesLoading(true);
+    const userLatitude = locationData?.latitude;
+    const userLongitude = locationData?.longitude;
+
+    if (!userLatitude || !userLongitude || !userData?.searchRadius) {
+      console.log("Missing location data or search radius");
       return { results: [], nextPageToken: null };
     }
-  };
+
+    // If we have a cooldown active and this isn't a pagination request, prevent the request
+    if (cooldown && !options?.pageToken) {
+      console.log("Request throttled due to cooldown");
+      return { results: [], nextPageToken: null };
+    }
+
+    // Set a brief cooldown to prevent rapid repeated requests
+    if (!options?.pageToken) {
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 2000);
+    }
+
+    // Default types if not provided
+    let requestTypes = options?.types || ['bar', 'restaurant', 'cafe', 'night_club'];
+    
+    // Check user filter from Firestore if available
+    if (!options?.types && userData?.filterId && userData.filterId !== "") {
+      try {
+        const filterDoc = await getDoc(doc(db, 'filters', userData.filterId));
+        if (filterDoc.exists()) {
+          const filterData = filterDoc.data() as FilterData;
+          if (filterData.isFiltered && Array.isArray(filterData.filters) && filterData.filters.length > 0) {
+            requestTypes = filterData.filters;
+            console.log("Using filter types:", requestTypes);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching filter data:", error);
+      }
+    }
+
+    console.log("Requesting places with types:", requestTypes);
+    
+    // Build parameters for backend request
+    const locationParam = `${userLatitude},${userLongitude}`;
+    const radius = Math.min(userData.searchRadius * 1000, 50000); // Max 50km
+    
+    const params = {
+      location: locationParam,
+      radius,
+      types: requestTypes.join('|'),
+      key: GOOGLE_API_KEY,
+      ...(options?.pageToken && { pagetoken: options.pageToken })
+    };
+
+    // Add retry logic for more reliable API calls
+    let retries = 0;
+    const maxRetries = 3;
+    let response;
+    
+    while (retries < maxRetries) {
+      try {
+        // If this is a page token request, add a small delay
+        // This helps with Google's API which sometimes needs time to process page tokens
+        if (options?.pageToken && retries === 0) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        
+        response = await axios.get('http://localhost:5000/api/places', { 
+          params,
+          timeout: 10000 // 10 second timeout
+        });
+        
+        // If we get here, the request succeeded
+        break;
+      } catch (error) {
+        retries++;
+        console.error(`API request failed (attempt ${retries}/${maxRetries}):`, 
+          axios.isAxiosError(error) ? error.message : error);
+          
+        if (retries >= maxRetries) {
+          throw error;
+        }
+        
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+      }
+    }
+    
+    if (response?.data?.results) {
+      // Update the hasMorePlaces state based on the response
+      setHasMorePlaces(!!response.data.next_page_token);
+      setNextPageToken(response.data.next_page_token || null);
+      
+      const filteredResults = response.data.results.filter((place: any) =>
+        !place.types?.some((type: string) => options?.excludedTypes?.includes(type))
+      ).map((place: any) => ({
+        place_id: place.place_id,
+        name: place.name || 'Unnamed Venue',
+        types: place.types || [],
+        vicinity: place.vicinity || 'Address not available',
+        rating: place.rating || 0,
+        geometry: {
+          location: {
+            lat: place.geometry?.location?.lat || 0,
+            lng: place.geometry?.location?.lng || 0
+          }
+        },
+        photos: place.photos?.map((photo: any) => ({
+          photo_reference: photo.photo_reference
+        })) || []
+      }));
+      
+      console.log(`Found ${filteredResults.length} venues after filtering`);
+      
+      return {
+        results: filteredResults,
+        nextPageToken: response.data.next_page_token || null
+      };
+    }
+    
+    return { results: [], nextPageToken: null };
+    
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('API Error:', error.response?.data || error.message);
+    } else {
+      console.error('API Error:', error);
+    }
+    return { results: [], nextPageToken: null };
+  } finally {
+    setPlacesLoading(false);
+  }
+};
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -362,18 +347,21 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       await updateDoc(doc(db, 'users', user.uid), {
-        location: {
-          address: newLocation.address,
-          coordinates: new GeoPoint(newLocation.latitude, newLocation.longitude)
-        }
+       locationId: user.uid,
       });
 
-      setUserData(prev => ({
+      await updateDoc(doc(db, 'user_locations', user.uid), {
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+        address: newLocation.address,
+      });
+
+      setLocationData(prev => ({
         ...prev!,
-        location: {
-          address: newLocation.address,
-          coordinates: new GeoPoint(newLocation.latitude, newLocation.longitude)
-        }
+        locationId: user.uid,
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+        address: newLocation.address,
       }));
     } catch (error) {
       //console.error('Update error:', error);
@@ -390,18 +378,19 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   useEffect(() => {
-    if (userData?.location.coordinates && userData?.searchRadius) {
+    if (locationData?.latitude && locationData?.longitude && userData?.searchRadius) {
       setNearbyPlaces([]);
       setNextPageToken(null);
       setHasMorePlaces(true);
       fetchNearbyPlaces();
     }
-  }, [userData?.location.coordinates, userData?.searchRadius]);
+  }, [locationData?.latitude,locationData?.longitude, userData?.searchRadius]);
 
   return (
-<UserContext.Provider
+<UserContextInstance.Provider
       value={{
         user,
+        locationData,
         userData,
         loading,
         signOut,
@@ -417,8 +406,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       }}
     >
       {children}
-    </UserContext.Provider>
+    </UserContextInstance.Provider>
   );
 };
 
-export const useUser = () => useContext(UserContext);
+export const useUser = () => useContext(UserContextInstance);

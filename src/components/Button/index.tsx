@@ -1,22 +1,23 @@
 // components/Button/index.tsx
 import React from 'react';
-import { TouchableOpacity, Text, ViewStyle, TextStyle, ActivityIndicator, View, Image } from 'react-native';
+import { TouchableOpacity, Text, ViewStyle, TextStyle, ActivityIndicator, View } from 'react-native';
 import styles from './styles';
 
 export interface ButtonProps {
-  onPress?: () => void;  // Made optional with ?
+  onPress?: () => void;
   title?: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'circle';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
   icon?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  customStyle?: ViewStyle;
 }
 
 export default function Button({ 
-  onPress = () => {},  // Add default empty function
+  onPress = () => {},
   title, 
   variant = 'primary',
   size = 'medium',
@@ -24,7 +25,8 @@ export default function Button({
   loading = false,
   icon,
   style,
-  textStyle
+  textStyle,
+  customStyle
 }: ButtonProps) {
   return (
     <TouchableOpacity
@@ -35,12 +37,14 @@ export default function Button({
         styles[`${variant}Button`],
         styles[`${size}Button`],
         disabled && styles.disabledButton,
+        variant === 'circle' && styles.circleButton,
+        customStyle,
         style
       ]}
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={styles[`${variant}Text`].color} />
+        <ActivityIndicator color={styles[`${variant}Text`]?.color || '#fff'} />
       ) : (
         <>
           {icon && icon}

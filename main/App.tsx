@@ -1,5 +1,6 @@
 import { Text, View, Image, TouchableOpacity } from 'react-native';
 import React, { useEffect } from 'react';
+import { NotificationProvider } from 'src/components/Notification/NotificationContext';
 import 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -32,6 +33,7 @@ type TabParamList = {
   Discover: undefined;
   'My Group': undefined;
   'My Profile': undefined;
+  'Filters': undefined;
 };
 
 type DrawerParamList = {
@@ -126,9 +128,6 @@ function TabNavigator() {
 }
 
 function DrawerNavigator() {
-  const handleLogout = () => {
-    //console.log('Logging out...');
-  };
 
   return (
     <Drawer.Navigator
@@ -150,11 +149,13 @@ export default function App() {
     'Jaldi-Regular': require('../assets/fonts/Jaldi-Regular.ttf'),
     'Jaldi-Bold': require('../assets/fonts/Jaldi-Bold.ttf'),
   });
+  
 
   return (
+    <NotificationProvider>
     <UserProvider>
     <NavigationContainer>
-      <Stack.Navigator 
+    <Stack.Navigator 
         initialRouteName="Login" 
         screenOptions={{ headerShown: false }}
       >
@@ -165,8 +166,9 @@ export default function App() {
         
         {/* Main App */}
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
-      </Stack.Navigator>
+    </Stack.Navigator>
     </NavigationContainer>
     </UserProvider>
+    </NotificationProvider>
   );
 }

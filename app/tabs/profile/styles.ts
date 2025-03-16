@@ -57,6 +57,18 @@ export default StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Jaldi-Regular',
   },
+  filterButton: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  filterButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Jaldi-Regular',
+  },
   profileImage: {
     width: 125,
     height: 125,
@@ -149,5 +161,31 @@ export default StyleSheet.create({
   deleteText: {
     color: '#FF3B30',
     fontFamily: 'Jaldi-Regular',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center'
+  },
+  retryText: {
+    color: '#007AFF',
+    marginTop: 10
+  },
+  inlineError: {
+    padding: 15,
+    backgroundColor: '#ffebee',
+    margin: 20,
+    borderRadius: 8
   },
 });

@@ -10,11 +10,15 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../../src/services/firebase/config';
+import { useUser } from 'src/context/UserContext';
+import { useNotification } from 'src/components/Notification/NotificationContext';
 WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
+  const { showSuccess, showError } = useNotification();
   const [email, setEmail] = useState('');
+  const  userData  = useUser();
   const [password, setPassword] = useState('');
   const { performLogin, loading, error } = useAuth();
 
@@ -33,17 +37,20 @@ const LoginScreen = () => {
       signInWithCredential(auth, credential)
         .then(() => navigation.navigate('DrawerNavigator'))
         .catch((error) => Alert.alert('Google Sign-In Error', error.message));
+        showError("Google Sigin error");
     }
   }, [response]);
 
   const handleSubmit = async () => {
     if (!validateEmail(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
+      showError('Input a valid email address');
       return;
     }
 
     if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters');
+      showError('Password must be at least 6 characters long');
       return;
     }
 
@@ -51,6 +58,7 @@ const LoginScreen = () => {
     
     if (result.success) {
       navigation.navigate('DrawerNavigator');
+      showSuccess('Login Sucessful: ' + userData.userData?.username);
     }
   };
 

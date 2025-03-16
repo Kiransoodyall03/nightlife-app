@@ -120,6 +120,7 @@ const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => 
           latitude: location.latitude,
           longitude: location.longitude
         }
+        
       });
 
       if (result.success) {

@@ -1,16 +1,21 @@
 // FilterScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Dimensions, Alert } from 'react-native';
+import { useAuth } from '../../../src/services/auth/useAuth';
 import { NavigationProp } from '@react-navigation/native';
 import { styles } from './styles';
-const { width } = Dimensions.get('window');
+import { useUser } from '../../../src/context/UserContext';
+import { useNotification } from 'src/components/Notification/NotificationContext';
+
 const NUM_COLUMNS = 3;
-const ITEM_MARGIN = 8;
-const ITEM_WIDTH = (width - (32 + (NUM_COLUMNS + 1) * ITEM_MARGIN)) / NUM_COLUMNS;
 
 const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {showError, showSuccess} = useNotification();
+  const { handleFilters} = useAuth();
+  const { user } = useUser();
 
   // Replace with actual API call to fetch place types
   useEffect(() => {
@@ -52,6 +57,36 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     );
   };
 
+  const handleSubmitFilters = async () => {
+    if (selectedTypes.length < 3) {
+      showError('Please select at least 3 interests');
+      return;
+    }
+  
+    setIsSubmitting(true);
+    
+    try {
+      const result = await handleFilters({
+        filterId: user?.uid || '',
+        userId: user?.uid,
+        filters: selectedTypes.map(type => type.replace(/ /g, '_')),
+        isFiltered: selectedTypes.length > 0,
+      });
+  
+      if (result.success) {
+        showSuccess("Successfully Saved Filters");
+        navigation.navigate("DrawerNavigator");
+      } else if (result.error) {
+        Alert.alert('Error', result.error.message);
+      }
+    } catch (error) {
+      showError('Failed to save filters. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -64,10 +99,11 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         </TouchableOpacity>
         <Text style={styles.title}>Interests</Text>
         <TouchableOpacity 
-          onPress={() => navigation.navigate("DrawerNavigator")}
-          style={styles.doneButton}
-        >
-          <Text style={styles.doneButtonText}>Done</Text>
+        onPress={handleSubmitFilters}
+        style={styles.doneButton}
+        disabled={isSubmitting}
+      >
+          <Text style={styles.doneButtonText}>{isSubmitting ? 'Saving...' : 'Done'}</Text>
         </TouchableOpacity>
       </View>
 

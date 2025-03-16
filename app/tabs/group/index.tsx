@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, FlatList, Image, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { styles } from './styles';
+import { useNotification } from 'src/components/Notification/NotificationContext';
 
 // Types
 interface MatchedUser {
@@ -21,8 +22,9 @@ interface Location {
 }
 
 const LocationGroups: React.FC = () => {
-  // Sample data based on the requirements
+  const { showSuccess, showError } = useNotification();
   const locations: Location[] = [
+    // Keep your existing sample data
     {
       id: '1',
       name: "Jo'Anna MeltBar",
@@ -132,47 +134,30 @@ const LocationGroups: React.FC = () => {
     }
   ];
 
-  // Function to open Uber app
   const openUberApp = () => {
-    // Example deep link to Uber app
-    Linking.openURL('uber://')
-      .catch(() => {
-        // Fallback to Uber website if app is not installed
-        Linking.openURL('https://www.uber.com/');
-      });
+    Linking.openURL('uber://').catch(() => Linking.openURL('https://www.uber.com/'));
   };
 
-  // Component for rendering horizontal scrollable matched locations
   const MatchedLocationsScroll = () => (
     <View style={styles.matchedLocationsContainer}>
       <Text style={styles.sectionTitle}>Your Matched Locations</Text>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalScrollContent}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.horizontalScrollContent}>
         {locations.map((location) => (
           <TouchableOpacity key={location.id} style={styles.locationCircleContainer}>
-            <Image 
-              source={{ uri: location.image }} 
-              style={styles.locationCircleImage}
-            />
+            <Image source={{ uri: location.image }} style={styles.locationCircleImage} />
+            <View style={styles.activeIndicator} />
           </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
   );
 
-  // Component for rendering matched users profile pictures
   const MatchedUsersIcons = ({ users, extraCount }: { users: MatchedUser[], extraCount?: number }) => (
     <View style={styles.matchedUsersContainer}>
       {users.map((user, index) => (
-        <View key={user.id} style={styles.userImageWrapper}>
-          <Image 
-            source={{ uri: user.profileImage }} 
-            style={styles.userProfileImage} 
-          />
-        </View>
+        <Image key={user.id} source={{ uri: user.profileImage }}
+          style={[styles.userProfileImage, { zIndex: users.length - index }]} />
       ))}
       {extraCount && (
         <View style={styles.extraCountContainer}>
@@ -182,32 +167,28 @@ const LocationGroups: React.FC = () => {
     </View>
   );
 
-  // Component for rendering each location item
   const LocationItem = ({ item }: { item: Location }) => (
     <View style={styles.locationItemContainer}>
+      <Image source={{ uri: item.image }} style={styles.locationImage} />
+      
       <View style={styles.locationInfoContainer}>
         <Text style={styles.locationName}>{item.name}</Text>
-        <View style={styles.ratingContainer}>
-          <Image 
-            source={require('../../../assets/icons/star-icon.png')} 
-            style={styles.starIcon} 
-          />
-          <Text style={styles.ratingText}>{item.rating}</Text>
+        
+        <View style={styles.metaContainer}>
+          <View style={styles.ratingContainer}>
+            <Image source={require('../../../assets/icons/star-icon.png')} 
+              style={styles.starIcon} />
+            <Text style={styles.ratingText}>{item.rating}</Text>
+          </View>
+          <Text style={styles.distanceText}>{item.distance}km away</Text>
         </View>
-        <Text style={styles.distanceText}>{item.distance}km</Text>
-      </View>
-      
-      <View style={styles.locationDetailsContainer}>
-        <MatchedUsersIcons 
-          users={item.matchedUsers} 
-          extraCount={item.extraUserCount} 
-        />
-        <TouchableOpacity 
-          style={styles.uberButtonContainer}
-          onPress={openUberApp}
-        >
-          <Text style={styles.uberButtonText}>{item.partnerType}</Text>
-        </TouchableOpacity>
+        
+        <View style={styles.footerContainer}>
+          <MatchedUsersIcons users={item.matchedUsers} extraCount={item.extraUserCount} />
+          <TouchableOpacity style={styles.uberButton} onPress={openUberApp}>
+            <Text style={styles.uberButtonText}>{item.partnerType}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );

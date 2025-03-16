@@ -1,9 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.9;
-const CARD_HEIGHT = Math.min(height * 0.8, height - 100); // Ensure card doesn't exceed screen size
-
 export default StyleSheet.create({
   card: {
     flex: 1,
@@ -19,25 +15,45 @@ export default StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  gradient: {
+    height: '50%', // Take up bottom half of the card
+    justifyContent: 'flex-end',
+    width: '100%',
+  },
   image: {
     width: '100%',
-    height: '65%',
+    justifyContent: 'flex-end',
+    height: '100%',
   },
   infoContainer: {
-    flex: 1,
-    padding: 16,
-    justifyContent: 'space-between',
+    padding: 12,
+    width: '100%',
   },
   name: {
-    fontSize: 24,
+    fontSize: 36,
     fontWeight: 'bold',
     fontFamily: 'Jaldi-Regular',
     color: '#fff',
+    marginBottom: 8,
+    marginLeft: 12,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 12,
+    marginLeft: 10,
+  },
+  tag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 8,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    marginRight: 8,
+    textAlign: 'center',
+  },
+  tagText: {
+    color: '#fff',
+    fontSize: 16,
   },
   typesContainer: {
     flexDirection: 'row',
@@ -46,50 +62,55 @@ export default StyleSheet.create({
   },
   typeBox: {
     backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    borderRadius: 60,
     paddingVertical: 6,
     paddingHorizontal: 12,
     marginRight: 8,
     marginBottom: 8,
   },
   typeText: {
-    fontSize: 12,
-    color: '#333',
-    fontWeight: '500',
-  },
-  tag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 8,
-    borderRadius: 16,
-    marginRight: 8,
-  },
-  tagText: {
+    fontSize: 16,
+    fontFamily: 'Jaldi-Regular',
     color: '#fff',
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
   type: {
     fontSize: 16,
     color: '#fff',
   },
   description: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     marginBottom: 12,
   },
   footer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
+  ratingDistanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   distance: {
-    fontSize: 14,
-    color: '#007AFF',
+    fontSize: 16,
+    color: '#fff',
   },
   rating: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#FFA500',
+    fontWeight: '600',
+    marginRight: 12,
+    marginLeft: 12,
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 10,
+    marginBottom: 20,
   },
 });
