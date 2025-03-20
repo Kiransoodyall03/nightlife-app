@@ -42,18 +42,7 @@ export default function TabLayout() {
           name="discover"
           options={{
             title: 'Disocver',
-            headerLeft: () => (
-              <TouchableOpacity
-                style={[styles.menuButton, { marginLeft: 8 }]}
-                onPress={() => drawerRef.current?.openDrawer()}
-              >
-                <FontAwesome name="bars" size={24} color="#333" />
-              </TouchableOpacity>
-            ),
-            tabBarIcon: ({ color }) => (
-              <FontAwesome name="fire" size={24} color={color} />
-            ),
-          }}
+            }}
         />
         <Tabs.Screen
           name="map"

@@ -1,34 +1,31 @@
-import { Text, View, Image, TouchableOpacity } from 'react-native';
 import React, { useEffect } from 'react';
-import { NotificationProvider } from 'src/components/Notification/NotificationContext';
-import 'react-native-gesture-handler';
+import { Text, View, Image, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BottomTabNavigationProp, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useFonts } from 'expo-font';
 import DiscoverScreen from '../app/tabs/discover';
 import GroupScreen from '../app/tabs/group';
 import ProfileScreen from '../app/tabs/profile';
 import LoginScreen from '../app/screens/login';
+import SignUpScreen from '../app/screens/register';
 import FilterScreen from 'app/screens/filter';
-import SignUpScreen from '../app/screens/register'; // Add this import
 import TitleComponent from '../src/components/Title-Dark/title-animated';
-import { useFonts } from 'expo-font';
-import { styles, DRAWER_WIDTH} from './style';
-import { setLogLevel } from "firebase/firestore";
+import { styles, DRAWER_WIDTH } from './style';
 import { UserProvider } from '../src/context/UserContext';
-setLogLevel("debug");
+import { NotificationProvider } from 'src/components/Notification/NotificationContext';
+import CustomDrawerContent from 'src/components/DrawerNavigation';
 
+// Navigation type definitions
 type StackParamList = {
   Login: undefined;
-  Register: undefined; // Add SignUp route
+  Register: undefined;
   DrawerNavigator: undefined;
   Filter: undefined;
 };
 
-// Keep other type definitions the same
 type TabParamList = {
   Discover: undefined;
   'My Group': undefined;
@@ -49,12 +46,10 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Stack = createStackNavigator<StackParamList>();
 
-
 function TabNavigator() {
-
   return (
     <Tab.Navigator
-      screenOptions={({ navigation, route }) => ({
+      screenOptions={({ navigation }) => ({
         headerTitleAlign: 'center',
         headerLeft: () => (
           <TouchableOpacity
@@ -64,18 +59,12 @@ function TabNavigator() {
             }}
             style={styles.menuButton}
           >
-            <Image
-              source={require('../assets/icons/menu-icon.png')}
-              style={styles.menuIcon}
-            />
+            <Image source={require('../assets/icons/menu-icon.png')} style={styles.menuIcon} />
           </TouchableOpacity>
         ),
         headerTitle: () => (
           <View style={styles.headerTitleContainer}>
-            <Image
-              source={require('@assets/icons/discover-icon.png')}
-              style={styles.headerIcon}
-            />
+            <Image source={require('@assets/icons/discover-icon.png')} style={styles.headerIcon} />
             <TitleComponent text="NightLife" />
           </View>
         ),
@@ -89,11 +78,8 @@ function TabNavigator() {
         component={DiscoverScreen}
         options={{
           headerTitle: () => <TitleComponent text="NightLife" />,
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={require('@assets/icons/discover-icon.png')}
-              style={styles.tabIcon}
-            />
+          tabBarIcon: () => (
+            <Image source={require('@assets/icons/discover-icon.png')} style={styles.tabIcon} />
           ),
         }}
       />
@@ -102,11 +88,8 @@ function TabNavigator() {
         component={GroupScreen}
         options={{
           headerTitle: () => <TitleComponent text="Groups" />,
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={require('@assets/icons/group-icon.png')}
-              style={styles.tabIcon}
-            />
+          tabBarIcon: () => (
+            <Image source={require('@assets/icons/group-icon.png')} style={styles.tabIcon} />
           ),
         }}
       />
@@ -115,11 +98,8 @@ function TabNavigator() {
         component={ProfileScreen}
         options={{
           headerTitle: () => <TitleComponent text="My Profile" />,
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={require('@assets/icons/profile-icon.png')}
-              style={styles.tabIcon}
-            />
+          tabBarIcon: () => (
+            <Image source={require('@assets/icons/profile-icon.png')} style={styles.tabIcon} />
           ),
         }}
       />
@@ -128,9 +108,9 @@ function TabNavigator() {
 }
 
 function DrawerNavigator() {
-
   return (
     <Drawer.Navigator
+      drawerContent={(props) => <CustomDrawerContent {...props} />} // Set custom drawer content here
       screenOptions={{
         drawerStyle: {
           width: DRAWER_WIDTH,
@@ -143,32 +123,24 @@ function DrawerNavigator() {
   );
 }
 
-
 export default function App() {
   const [fontsLoaded] = useFonts({
     'Jaldi-Regular': require('../assets/fonts/Jaldi-Regular.ttf'),
     'Jaldi-Bold': require('../assets/fonts/Jaldi-Bold.ttf'),
   });
-  
 
   return (
     <NotificationProvider>
-    <UserProvider>
-    <NavigationContainer>
-    <Stack.Navigator 
-        initialRouteName="Login" 
-        screenOptions={{ headerShown: false }}
-      >
-        {/* Auth Screens */}
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={SignUpScreen} />
-        <Stack.Screen name="Filter" component={FilterScreen} />
-        
-        {/* Main App */}
-        <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
-    </Stack.Navigator>
-    </NavigationContainer>
-    </UserProvider>
+      <UserProvider>
+        <NavigationContainer>
+          <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={SignUpScreen} />
+            <Stack.Screen name="Filter" component={FilterScreen} />
+            <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </UserProvider>
     </NotificationProvider>
   );
 }
