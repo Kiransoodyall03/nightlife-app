@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { DrawerContentScrollView, DrawerItem, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useUser } from 'src/context/UserContext';
 import styles from './styles';
@@ -18,6 +18,9 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
       console.error('Logout failed:', error);
     }
   };
+
+  // Retrieve the groupId from userData or any other context/state.
+  // Replace `currentGroupId` with the actual key where the group id is stored.
 
   return (
     <DrawerContentScrollView {...props} style={styles.drawerContent}>
@@ -59,7 +62,9 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
 
       <DrawerItem
         label="Group Invite"
-        onPress={() => props.navigation.navigate('GroupInvite')}
+        onPress={() => {
+            props.navigation.navigate('GroupInvite' );
+        }}
         icon={() => (
           <Image
             source={require('../../../assets/icons/group-icon.png')}
@@ -74,4 +79,5 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
     </DrawerContentScrollView>
   );
 };
+
 export default CustomDrawerContent;

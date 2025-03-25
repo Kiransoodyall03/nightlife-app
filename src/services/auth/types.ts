@@ -23,12 +23,17 @@ export interface FirebaseAuthError extends Error {
     filterId: any;
   }
   
-  export interface GroupData{
-    groupId: string;
-    groupnName: string;
-    members: string[];
-    createdAt: Date;
-  }
+// Add to GroupData interface
+export interface GroupData {
+  groupId: string;
+  groupName: string;
+  members: string[];
+  createdAt: Date;
+  isActive: boolean;
+  filterId: string;
+  locationId?: string;
+}
+
   export interface AuthUser {
     username: string;
     email: string;

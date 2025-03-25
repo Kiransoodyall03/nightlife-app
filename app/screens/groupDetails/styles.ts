@@ -1,8 +1,7 @@
-// CombinedGroupsMatchesStyles.ts
+// GroupDetailStyles.ts
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
-const circleSize = 80;
 
 export const styles = StyleSheet.create({
   // Main container
@@ -10,78 +9,55 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  // ------------- Groups Horizontal Scroll -------------
-  groupsScroll: {
+  // ------------- Header Section -------------
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    marginRight: 16,
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: '#6200EE',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    flex: 1,
+  },
+  // ------------- Cover Images Section -------------
+  coverContainer: {
+    height: 140,
+    marginVertical: 12,
     paddingLeft: 16,
   },
-  groupCircle: {
-    width: circleSize,
-    height: circleSize,
-    borderRadius: circleSize / 2,
+  coverImage: {
+    width: 120,
+    height: 120,
     marginRight: 12,
-    borderWidth: 2,
-    borderColor: '#ccc',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupCircleSelected: {
-    borderColor: '#FF0051',
-    borderWidth: 3,
-  },
-  groupImage: {
-    width: circleSize,
-    height: circleSize,
+    borderRadius: 8,
     resizeMode: 'cover',
   },
-  groupLabelContainer: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingVertical: 2,
-  },
-  groupLabelText: {
-    color: '#fff',
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  // Divider between group circles and locations list
-  divider: {
-    height: 1,
-    backgroundColor: '#ccc',
-    marginVertical: 4,
-  },
-  // ------------- Locations List -------------
-  locationsList: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#777',
-  },
-  // Each location item
+  // ------------- Location Item Section -------------
   locationItem: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f7f7f7',
     borderRadius: 8,
+    marginHorizontal: 16,
     marginVertical: 8,
-    padding: 10,
-    alignItems: 'center',
+    padding: 12,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-  },
-  locationCover: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
-    resizeMode: 'cover',
   },
   locationInfo: {
     flex: 1,
@@ -101,12 +77,12 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  // ------------- Overlapping Matched Members -------------
+  // ------------- Matched Members Overlap -------------
   membersContainer: {
-    width: 80,
+    width: 80, // adjust as needed
     height: 40,
     position: 'relative',
-    marginRight: 10,
+    marginRight: 12,
   },
   memberImage: {
     width: 36,
@@ -120,13 +96,13 @@ export const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FF0051',
+    backgroundColor: '#6200EE',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
     borderWidth: 2,
     borderColor: '#fff',
-    opacity: 0.9,
+    opacity: 0.9, // slightly reduced clarity
   },
   extraCountText: {
     color: '#fff',
@@ -137,8 +113,10 @@ export const styles = StyleSheet.create({
   uberButton: {
     backgroundColor: '#000',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   uberButtonText: {
     color: '#fff',

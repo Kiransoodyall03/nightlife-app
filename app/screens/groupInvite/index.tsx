@@ -1,59 +1,155 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share, Image, ToastAndroid, Platform, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Share, 
+  Platform, 
+  ToastAndroid, 
+  Alert, 
+  ActivityIndicator 
+} from 'react-native';
 import TitleComponent from 'src/components/Title-Dark/title-animated';
 import { useUser } from 'src/context/UserContext';
-import QRCode from 'react-native-qrcode-svg'; // You'll need to install this
+import QRCode from 'react-native-qrcode-svg';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from 'src/services/firebase/config';
+import Clipboard from '@react-native-clipboard/clipboard';
+import styles from './styles';
+import { NavigationProp } from '@react-navigation/native';
 
-const GroupInviteScreen = ({ navigation }) => {
-    const userData = useUser();
-    const [inviteCode, setInviteCode] = useState('');
-    const [qrValue, setQrValue] = useState('');
-  
+type RootStackParamList = {
+  GroupInvite: { groupId: string };
+  DrawerNavigator: undefined;
+};
+
+type GroupInviteScreenNavigationProp = StackNavigationProp<RootStackParamList, 'GroupInvite'>;
+type GroupInviteScreenRouteProp = RouteProp<RootStackParamList, 'GroupInvite'>;
+
+interface GroupInviteScreenProps {
+  navigation: GroupInviteScreenNavigationProp;
+  route: GroupInviteScreenRouteProp;
+}
+
+const GroupInviteScreen: React.FC<GroupInviteScreenProps> = ({ navigation, route }) => {
+  const { userData } = useUser();
+  const [inviteCode, setInviteCode] = useState<string>('');
+  const [qrValue, setQrValue] = useState<string>('');
+  const [groupName, setGroupName] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    // Generate a random invite code - in production, this should come from your backend
-    const generateInviteCode = () => {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let code = '';
-      for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    const fetchGroupAndGenerateCode = async () => {
+      // Safely retrieve the groupId from route params
+      const groupId = route.params?.groupId;
+      if (!groupId) {
+        setError('Group ID is missing. Please select a group first.');
+        setLoading(false);
+        return;
       }
-      return code;
+
+      try {
+        // Fetch group details using the groupId (group details are stored in the group document)
+        const groupDoc = await getDoc(doc(db, 'groups', groupId));
+        if (!groupDoc.exists()) {
+          setError('Group not found');
+          setLoading(false);
+          return;
+        }
+        const groupData = groupDoc.data();
+        setGroupName(groupData.groupName);
+
+        // Generate a random invite code
+        const generateInviteCode = (): string => {
+          const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+          let code = '';
+          for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          return code;
+        };
+
+        const code = generateInviteCode();
+
+        // Update the group document with the invite code and expiry (using a server timestamp if needed)
+        await updateDoc(doc(db, 'groups', groupId), {
+          inviteCode: code,
+          inviteExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // expires in 24 hours
+        });
+
+        setInviteCode(code);
+
+        // Prepare the QR code value with group details
+        const value = JSON.stringify({
+          type: 'group_invite',
+          groupId: groupId,
+          code: code,
+          groupName: groupData.groupName,
+          invitedBy: userData?.username || 'User',
+          timestamp: new Date().toISOString()
+        });
+        setQrValue(value);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error generating invite:', error);
+        setError('Failed to generate invite code');
+        setLoading(false);
+      }
     };
-    
-    const code = generateInviteCode();
-    setInviteCode(code);
-    
-    // The QR value would typically include more information, such as the group ID
-    const value = JSON.stringify({
-      type: 'group_invite',
-      code: code,
-      username: userData?.userData?.username || 'User',
-      timestamp: new Date().toISOString()
-    });
-    
-    setQrValue(value);
-  }, [userData]);
-  
-  const copyCodeToClipboard = () => {
-    // In a real app, you would use Clipboard.setString(inviteCode)
-    // Since we can't actually copy, let's simulate it with a toast/alert
+
+    fetchGroupAndGenerateCode();
+  }, [route.params, userData]);
+
+  const copyCodeToClipboard = (): void => {
+    Clipboard.setString(inviteCode);
     if (Platform.OS === 'android') {
       ToastAndroid.show('Code copied to clipboard!', ToastAndroid.SHORT);
     } else {
       Alert.alert('Success', 'Code copied to clipboard!');
     }
   };
-  
-  const shareInvite = async () => {
+
+  const shareInvite = async (): Promise<void> => {
     try {
       await Share.share({
-        message: `Join my NightLife group with code: ${inviteCode}`,
+        message: `Join my NightLife group "${groupName}" with code: ${inviteCode}`,
       });
     } catch (error) {
       console.error('Error sharing:', error);
     }
   };
-  
+
+  const handleDone = (): void => {
+    navigation.navigate('DrawerNavigator');
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#6200ee" />
+        <Text style={styles.loadingText}>Generating invite code...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity
+          style={styles.errorButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.errorButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -68,6 +164,7 @@ const GroupInviteScreen = ({ navigation }) => {
       
       <View style={styles.content}>
         <Text style={styles.titleText}>Share Your Group</Text>
+        <Text style={styles.groupNameText}>{groupName}</Text>
         <Text style={styles.subtitleText}>
           Invite friends to join your NightLife group using the QR code or invite code below.
         </Text>
@@ -110,126 +207,16 @@ const GroupInviteScreen = ({ navigation }) => {
             Group codes expire after 24 hours for security reasons.
           </Text>
         </View>
+        
+        <TouchableOpacity
+          style={styles.doneButton}
+          onPress={handleDone}
+        >
+          <Text style={styles.doneButtonText}>Done</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f4f4f4',
-    paddingBottom: 15,
-  },
-  backButton: {
-    marginRight: 20,
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    alignItems: 'center',
-  },
-  titleText: {
-    fontSize: 22,
-    fontFamily: 'Jaldi-Bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  subtitleText: {
-    fontSize: 16,
-    fontFamily: 'Jaldi-Regular',
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  qrContainer: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 30,
-  },
-  qrPlaceholder: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#f0f0f0',
-  },
-  codeContainer: {
-    width: '100%',
-    marginBottom: 30,
-  },
-  codeLabel: {
-    fontSize: 16,
-    fontFamily: 'Jaldi-Bold',
-    marginBottom: 10,
-  },
-  codeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f7f7f7',
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-  },
-  codeText: {
-    fontSize: 20,
-    fontFamily: 'Jaldi-Bold',
-    letterSpacing: 1,
-  },
-  copyButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-  },
-  copyButtonText: {
-    color: 'white',
-    fontFamily: 'Jaldi-Bold',
-    fontSize: 14,
-  },
-  shareButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 15,
-    paddingHorizontal: 25,
-    borderRadius: 25,
-    width: '80%',
-    alignItems: 'center',
-  },
-  shareButtonText: {
-    color: 'white',
-    fontFamily: 'Jaldi-Bold',
-    fontSize: 16,
-  },
-  infoContainer: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    width: '100%',
-  },
-  infoText: {
-    fontSize: 14,
-    fontFamily: 'Jaldi-Regular',
-    color: '#666',
-    textAlign: 'center',
-  },
-});
 
 export default GroupInviteScreen;

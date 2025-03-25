@@ -6,6 +6,9 @@ export type RootStackParamList = {
   Register: undefined;
   Filter: undefined;
   DrawerNavigator: undefined;
+  GroupInvite: undefined;
+  FriendList: undefined;
+  CreateGroup: undefined;
 };
 
 export type LoginScreenNavigationProp = StackNavigationProp<
