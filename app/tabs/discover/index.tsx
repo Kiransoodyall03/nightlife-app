@@ -6,16 +6,25 @@ import { Venue } from '../../../src/components/VenueCard';
 import Button from 'src/components/Button';
 import styles from './styles';
 import { useUser } from 'src/context/UserContext';
+import { useNavigation } from '@react-navigation/native';
 import { useNotification } from 'src/components/Notification/NotificationContext';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from 'src/services/firebase/config';
 import { GooglePlace } from 'src/services/auth/types';
+import { fixGroupFilterIds, repairGroupFilterRelationships } from 'src/services/auth/groupService';
+import { recordSwipe, hasUserSwiped } from 'src/services/auth/swipeMatchService';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function DiscoverScreen() {
-  const { fetchNearbyPlaces, userData, locationData } = useUser();
+  const navigation = useNavigation();
+  const hasRepairedRef = useRef(false);
+  const { fetchNearbyPlaces, userData, locationData, refreshActiveGroups, hasActiveGroups } = useUser();
   const [venues, setVenues] = useState<Venue[]>([]);
+  const isInitialLoadInProgress = useRef(false);
+  const initialLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const swiperRef = useRef<Swiper<Venue> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isLoadingRef = useRef(false);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { showSuccess, showError } = useNotification();
@@ -23,25 +32,82 @@ export default function DiscoverScreen() {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
-  
-  // Track existing venue IDs to prevent duplicates
+  const initialLoadAttempted = useRef(false);
+  const [isGroupMode, setIsGroupMode] = useState(false);
+  const initialLoadingStarted = useRef(false);
   const venueIdsRef = useRef(new Set<string>());
-
-  // Filter fetching effect with improved comparison
   useEffect(() => {
-    let unsubscribe: () => void;
-    let isSubscribed = true;
+    if (userData?.uid) {
+      refreshActiveGroups();
+    }
+  }, [userData?.uid]);
   
-    const fetchFilters = async () => {
-      try {
-        if (!userData?.uid || !userData?.filterId) {
-          if (isSubscribed) {
-            setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+  useEffect(() => {
+    setIsGroupMode(hasActiveGroups);
+  }, [hasActiveGroups]);
+
+  const resetAndReloadVenues = useCallback(() => {
+    if (isInitialLoadInProgress.current) return; // Prevent reset during loading
+    
+    isInitialLoadInProgress.current = true;
+    setVenues([]);
+    setNextPageToken(null);
+    venueIdsRef.current.clear();
+    setInitialLoadDone(false);
+    
+    // Reset flag after a delay
+    setTimeout(() => {
+      isInitialLoadInProgress.current = false;
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    // Run once when user is authenticated
+    if (userData?.uid && !hasRepairedRef.current) {
+      console.log("Running data repair routine");
+      hasRepairedRef.current = true;
+      
+      // First fix the group filter IDs
+      fixGroupFilterIds(userData.uid)
+        .then(success => {
+          if (success) {
+            console.log("Group filter IDs fixed successfully");
+            // Then repair any relationships
+            return repairGroupFilterRelationships(userData.uid);
           }
-          return;
-        }
+          return false;
+        })
+        .then(success => {
+          if (success) {
+            console.log("Group filter relationships repaired successfully");
+            // Reload venues with corrected filters
+            resetAndReloadVenues();
+          }
+        })
+        .catch(error => {
+          console.error("Error during data repair:", error);
+        });
+    }
+  }, [userData?.uid, resetAndReloadVenues]);
   
-        const docRef = doc(db, 'filters', userData.filterId);
+
+useEffect(() => {
+  let unsubscribe: () => void;
+  let isSubscribed = true;
+
+  const fetchFilters = async () => {
+    try {
+      if (!userData?.uid || !userData?.filterId) {
+        if (isSubscribed) {
+          setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+        }
+        return;
+      }
+
+      const docRef = doc(db, 'filters', userData.filterId);
+      
+      // Wrap onSnapshot in try/catch for more resilience
+      try {
         unsubscribe = onSnapshot(docRef, (docSnap) => {
           if (!isSubscribed) return;
           
@@ -52,7 +118,7 @@ export default function DiscoverScreen() {
             // Only update if filters have really changed
             if (JSON.stringify(userFilters) !== JSON.stringify(newFilters)) {
               setUserFilters(newFilters);
-              // Reset when filters change
+              // Reset when filters change, but only if we've already loaded once
               if (initialLoadDone) {
                 resetAndReloadVenues();
               }
@@ -62,28 +128,27 @@ export default function DiscoverScreen() {
           }
         });
       } catch (error) {
-        console.error("Filter fetch error:", error);
+        console.error("Error subscribing to filters:", error);
         if (isSubscribed) {
           setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
         }
       }
-    };
-  
-    fetchFilters();
-    
-    return () => {
-      isSubscribed = false;
-      unsubscribe?.();
-    };
-  }, [userData?.uid, userData?.filterId]);
+    } catch (error) {
+      console.error("Filter fetch error:", error);
+      if (isSubscribed) {
+        setUserFilters(['bar', 'restaurant', 'cafe', 'night_club']);
+      }
+    }
+  };
 
-  // Reset function for filters change
-  const resetAndReloadVenues = useCallback(() => {
-    setVenues([]);
-    setNextPageToken(null);
-    venueIdsRef.current.clear();
-    setInitialLoadDone(false);
-  }, []);
+  fetchFilters();
+  
+  return () => {
+    isSubscribed = false;
+    unsubscribe?.();
+  };
+}, [userData?.uid, userData?.filterId, resetAndReloadVenues]);
+
 
   const calculateDistance = useCallback((placeLocation: { lat?: number, lng?: number }) => {
     if (!locationData || !placeLocation.lat || !placeLocation.lng) return 'N/A';
@@ -114,10 +179,10 @@ export default function DiscoverScreen() {
       distance: calculateDistance({
         lat: place.geometry?.location?.lat,
         lng: place.geometry?.location?.lng
-      })
+      }),
+      rawData: place
     }));
   }, [GOOGLE_API_KEY, calculateDistance]);
-
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -139,13 +204,49 @@ export default function DiscoverScreen() {
       setVenues([]);
       venueIdsRef.current.clear();
       
-      const response = await fetchNearbyPlaces({ types: userFilters });
-      
-      if (response.results.length === 0) {
+      let response;
+      try {
+        response = await fetchNearbyPlaces();
+      } catch (error: any) {
+        // If throttled, wait and try again
+        if (error.message === "Request throttled due to cooldown") {
+          console.log("Request throttled, waiting 3 seconds before retry");
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          response = await fetchNearbyPlaces();
+        } else {
+          // For other errors, try one more time with default filters
+          console.error("Error fetching venues, trying with default filters:", error);
+          try {
+            response = await fetchNearbyPlaces({
+              types: ['bar', 'restaurant', 'cafe', 'night_club']
+            });
+          } catch (fallbackError) {
+            console.error("Fallback fetch also failed:", fallbackError);
+            throw fallbackError;
+          }
+        }
+      }
+              
+      if (!response || response.results.length === 0) {
         showError('No venues found matching your filters. Try adjusting your preferences.');
         setVenues([]);
       } else {
-        const transformedVenues = transformPlacesToVenues(response.results);
+        // Filter out places the user has already swiped on
+        let placesToShow = response.results;
+        
+        if (userData?.uid) {
+          const filteredResults = [];
+          for (const place of response.results) {
+            const alreadySwiped = await hasUserSwiped(userData.uid, place.place_id);
+            if (!alreadySwiped) {
+              filteredResults.push(place);
+            }
+          }
+          placesToShow = filteredResults;
+        }
+        
+        // Now transform the filtered results
+        const transformedVenues = transformPlacesToVenues(placesToShow);
         console.log(`Successfully loaded ${transformedVenues.length} venues`);
         
         // Track IDs to prevent duplicates
@@ -163,15 +264,7 @@ export default function DiscoverScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData, transformPlacesToVenues]);
-
-  // Only trigger the initial load once (or when locationData changes)
-  useEffect(() => {
-    if (locationData && userFilters.length > 0 && !initialLoadDone) {
-      console.log("Calling loadInitialData from useEffect");
-      loadInitialData();
-    }
-  }, [locationData, userFilters, initialLoadDone, loadInitialData]);
+  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData, transformPlacesToVenues, userData?.uid]);
 
   const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore) return;
@@ -194,9 +287,21 @@ export default function DiscoverScreen() {
       }
       
       // Filter out duplicates using our tracking Set
-      const newPlaces = response.results.filter(place => 
+      let newPlaces = response.results.filter(place => 
         !venueIdsRef.current.has(place.place_id)
       );
+      
+      // Filter out places the user has already swiped on
+      if (userData?.uid) {
+        const notSwipedPlaces = [];
+        for (const place of newPlaces) {
+          const alreadySwiped = await hasUserSwiped(userData.uid, place.place_id);
+          if (!alreadySwiped) {
+            notSwipedPlaces.push(place);
+          }
+        }
+        newPlaces = notSwipedPlaces;
+      }
       
       if (newPlaces.length === 0) {
         // If we got only duplicates, try to get the next page
@@ -229,7 +334,7 @@ export default function DiscoverScreen() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError, transformPlacesToVenues]);
+  }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError, transformPlacesToVenues, userData?.uid]);
 
   const handleSwipedAll = useCallback(() => {
     if (nextPageToken) {
@@ -257,14 +362,64 @@ export default function DiscoverScreen() {
     setIsRefreshing(false);
   }, [isRefreshing, resetAndReloadVenues]);
 
-  const handleSwipedRight = (index: number) => {
+  const handleSwipedRight = async (index: number) => {
     console.log(`Liked: ${venues[index].name}`);
-    // Here you would implement your "like" logic
+    
+    if (!userData?.uid) return;
+    
+    // Convert back to GooglePlace type using saved rawData
+    const venue = venues[index];
+    if (venue.rawData) {
+      try {
+        // Record the swipe in Firestore
+        const success = await recordSwipe(venue.rawData as GooglePlace, 'right');
+        if (success) {
+          if (isGroupMode) {
+            showSuccess('Venue liked in your active groups');
+          } else {
+            showSuccess('Venue liked');
+          }
+        }
+      } catch (error) {
+        console.error('Error recording swipe:', error);
+        showError('Failed to record your preference');
+      }
+    }
   };
 
-  const handleSwipedLeft = (index: number) => {
+  const handleSwipedLeft = async (index: number) => {
     console.log(`Passed: ${venues[index].name}`);
-    // Here you would implement your "dislike" logic
+    
+    if (!userData?.uid) return;
+    
+    // Convert back to GooglePlace type using saved rawData
+    const venue = venues[index];
+    if (venue.rawData) {
+      try {
+        // Record the swipe in Firestore
+        await recordSwipe(venue.rawData as GooglePlace, 'left');
+      } catch (error) {
+        console.error('Error recording swipe:', error);
+      }
+    }
+  };
+  const toggleGroupMode = async () => {
+    if (!userData?.uid) {
+      showError('You need to be logged in to use group mode');
+      return;
+    }
+    
+    if (!hasActiveGroups && !isGroupMode) {
+      // No active groups but trying to enable group mode
+      showError('You have no active groups. Please join or create a group first.');
+      return;
+    }
+    
+    // Toggle group mode
+    setIsGroupMode(prev => !prev);
+    
+    // Reset and reload with new filters
+    resetAndReloadVenues();
   };
 
   if (!locationData) {
@@ -275,11 +430,18 @@ export default function DiscoverScreen() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && venues.length === 0) {
     return (
       <View style={styles.LoadingContainer}>
         <ActivityIndicator size="large" />
         <Text>Loading venues...</Text>
+        <Button 
+          title="Force Show Venues" 
+          onPress={() => {
+            setIsLoading(false);
+            setInitialLoadDone(true);
+          }} 
+        />
       </View>
     );
   }
@@ -300,7 +462,65 @@ export default function DiscoverScreen() {
       <Button title="Try again" onPress={props.resetError} />
     </View>
   );
+
+useEffect(() => {
+  if (locationData && 
+      userFilters.length > 0 && 
+      !initialLoadDone && 
+      !isLoading && 
+      !isInitialLoadInProgress.current) {
+    
+    console.log("Starting initial data load");
+    isInitialLoadInProgress.current = true;
+    setIsLoading(true);
+    
+    // Small delay to ensure everything is ready
+    setTimeout(() => {
+      console.log("Executing loadInitialData");
+      loadInitialData()
+        .then(() => {
+          console.log("Initial data load complete");
+        })
+        .catch(err => {
+          console.error("Error during initial load:", err);
+        })
+        .finally(() => {
+          // Always ensure loading states are reset
+          setIsLoading(false);
+          
+          // Delay resetting the flag to prevent rapid retriggering
+          setTimeout(() => {
+            isInitialLoadInProgress.current = false;
+          }, 2000);
+        });
+    }, 1500);
+  }
+}, [locationData, userFilters, initialLoadDone, isLoading, loadInitialData]);
+
+useEffect(() => {
+  console.log("State check:", {
+    isLoading,
+    initialLoadDone,
+    venuesLength: venues.length
+  });
+}, [isLoading, initialLoadDone, venues.length]);
+
+useEffect(() => {
+  // Force clear loading state after 10 seconds or if venues are available
+  const forceTimer = setTimeout(() => {
+    if (isLoading) {
+      console.log("Force clearing loading state after timeout");
+      setIsLoading(false);
+      // If we have venues, also mark as loaded
+      if (venues.length > 0) {
+        setInitialLoadDone(true);
+      }
+    }
+  }, 10000); // 10 second fail-safe
   
+  return () => clearTimeout(forceTimer);
+}, []);
+
   return (
     <View style={styles.cardsContainer}>
       <Swiper
@@ -312,6 +532,7 @@ export default function DiscoverScreen() {
             onLike={() => swiperRef.current?.swipeRight()}
             onDislike={() => swiperRef.current?.swipeLeft()}
             onRewind={() => swiperRef.current?.swipeBack()}
+            isGroupMode={isGroupMode}
           />
         )}
         onSwipedRight={handleSwipedRight}

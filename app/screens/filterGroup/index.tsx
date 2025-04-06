@@ -1,11 +1,19 @@
 // FilterGroupScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  ScrollView, 
+  Alert 
+} from 'react-native';
 import { NavigationProp, RouteProp } from '@react-navigation/native';
 import { styles } from './styles';
 import { useUser } from '../../../src/context/UserContext';
 import { useNotification } from 'src/components/Notification/NotificationContext';
 import { useAuth } from '../../../src/services/auth/useAuth';
+import {doc, updateDoc, arrayUnion} from 'firebase/firestore';
+import { db } from 'src/services/firebase/config';
 
 type RootStackParamList = {
   FilterGroup: { onSave: (filterId: string) => void };
@@ -56,7 +64,7 @@ const FilterGroupScreen: React.FC<FilterGroupScreenProps> = ({ navigation, route
     setAvailableTypes(typesFromAPI);
   }, []);
 
-  // Format types for display
+  // Format types for display (replace underscores with spaces)
   const formattedArray = availableTypes.map(item => item.replace(/_/g, ' '));
 
   const toggleType = (type: string) => {
@@ -85,7 +93,7 @@ const FilterGroupScreen: React.FC<FilterGroupScreenProps> = ({ navigation, route
   
       if (result.success) {
         showSuccess("Successfully Saved Filters");
-        // Call the callback passed from CreateGroupScreen
+        // Call the callback passed from CreateGroupScreen with the filterId
         route.params.onSave(user?.uid || '');
         navigation.goBack();
       } else if (result.error) {
@@ -127,32 +135,24 @@ const FilterGroupScreen: React.FC<FilterGroupScreenProps> = ({ navigation, route
         </Text>
       </View>
 
-      {/* Selected Types */}
-      <View style={styles.selectedContainer}>
-        <FlatList
-          data={selectedTypes}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.selectedType}
-              onPress={() => toggleType(item)}
-            >
-              <Text style={styles.selectedTypeText}>{item}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+      {/* Selected Types - horizontal scroll */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectedContainer}>
+        {selectedTypes.map(item => (
+          <TouchableOpacity 
+            key={item}
+            style={styles.selectedType}
+            onPress={() => toggleType(item)}
+          >
+            <Text style={styles.selectedTypeText}>{item}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-      {/* Available Types Grid */}
-      <FlatList
-        data={formattedArray}
-        numColumns={NUM_COLUMNS}
-        keyExtractor={(item) => item}
-        contentContainerStyle={styles.gridContent}
-        renderItem={({ item }) => (
+      {/* Available Types Grid in a ScrollView */}
+      <ScrollView contentContainerStyle={styles.gridContent}>
+        {formattedArray.map(item => (
           <TouchableOpacity
+            key={item}
             style={[
               styles.gridItem,
               selectedTypes.includes(item) && styles.selectedGridItem
@@ -166,8 +166,8 @@ const FilterGroupScreen: React.FC<FilterGroupScreenProps> = ({ navigation, route
               {item}
             </Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
     </View>
   );
 };

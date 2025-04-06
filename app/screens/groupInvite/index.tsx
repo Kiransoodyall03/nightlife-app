@@ -17,7 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from 'src/services/firebase/config';
-import Clipboard from '@react-native-clipboard/clipboard';
+import * as Clipboard from 'expo-clipboard';
 import styles from './styles';
 import { NavigationProp } from '@react-navigation/native';
 
@@ -104,8 +104,8 @@ const GroupInviteScreen: React.FC<GroupInviteScreenProps> = ({ navigation, route
     fetchGroupAndGenerateCode();
   }, [route.params, userData]);
 
-  const copyCodeToClipboard = (): void => {
-    Clipboard.setString(inviteCode);
+  const copyCodeToClipboard = async (): Promise<void> => {
+    await Clipboard.setStringAsync(inviteCode);
     if (Platform.OS === 'android') {
       ToastAndroid.show('Code copied to clipboard!', ToastAndroid.SHORT);
     } else {

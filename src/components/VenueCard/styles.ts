@@ -15,6 +15,21 @@ export default StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  groupModeIndicator: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(52, 199, 89, 0.8)', // Using your green color
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    zIndex: 10,
+  },
+  groupModeText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
   gradient: {
     height: '50%', // Take up bottom half of the card
     justifyContent: 'flex-end',

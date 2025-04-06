@@ -26,16 +26,59 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+    alignItems: 'center', // Center content horizontally
   },
+  // Image picker styles
+  imagePickerContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+    width: '100%',
+  },
+  imagePicker: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f2f2f2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    // Add shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  groupImagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  placeholderContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#6200EE',
+    fontWeight: '500',
+  },
+  // Existing styles
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#000', // Dark text
     marginTop: 24,
     marginBottom: 16,
+    alignSelf: 'flex-start', // Align text to the left
+    width: '100%',
   },
   inputContainer: {
     marginBottom: 24,
+    width: '100%',
   },
   inputLabel: {
     fontSize: 16,
@@ -48,6 +91,7 @@ const styles = StyleSheet.create({
     color: '#000',
     padding: 16,
     fontSize: 16,
+    width: '100%',
   },
   filterButton: {
     backgroundColor: '#e0e0e0', // Light grey for button background
@@ -55,6 +99,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginBottom: 24,
+    width: '100%',
   },
   filterButtonText: {
     color: '#000',
@@ -66,6 +111,7 @@ const styles = StyleSheet.create({
     color: '#333', // Slightly dark grey for informational text
     textAlign: 'center',
     marginBottom: 24,
+    width: '100%',
   },
   createButton: {
     backgroundColor: '#6200EE', // Retain primary button color
@@ -73,6 +119,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 32,
+    width: '100%',
   },
   createButtonText: {
     color: '#fff', // White text on the primary button
@@ -87,6 +134,7 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 14,
     marginBottom: 16,
+    width: '100%',
   },
   errorButton: {
     backgroundColor: '#6200EE',

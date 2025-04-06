@@ -4,6 +4,7 @@ import { X, RotateCw, Heart } from 'lucide-react-native';
 import Button from '../Button';
 import GradientView from '@assets/Gradient/GradientView';
 import styles from './styles';
+import { GooglePlace } from 'src/services/auth/types';
 
 export interface Venue {
   id: string;
@@ -14,6 +15,7 @@ export interface Venue {
   rating: number;
   distance?: string;
   tags?: string[];
+  rawData?: GooglePlace;
 }
 
 interface VenueCardProps {
@@ -21,9 +23,10 @@ interface VenueCardProps {
   onLike: () => void;
   onDislike: () => void;
   onRewind: () => void;
+  isGroupMode?: boolean;
 }
 
-export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueCardProps) {
+export default function VenueCard({ venue, onLike, onDislike, onRewind, isGroupMode = false }: VenueCardProps) {
   // Process tags
   const tags = venue.tags || 
     venue.type
@@ -39,6 +42,11 @@ export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueC
         style={styles.image} 
         resizeMode="cover"
       >
+        {isGroupMode && (
+          <View style={styles.groupModeIndicator}>
+            <Text style={styles.groupModeText}>Group Mode</Text>
+          </View>
+        )}
         <GradientView
           colors={['transparent', 'rgb(0, 0, 0)', 'rgb(0, 0, 0)']}
           style={styles.gradient}
