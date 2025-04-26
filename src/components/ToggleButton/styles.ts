@@ -179,8 +179,6 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
-  // Keep original styles for backward compatibility
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -207,15 +205,5 @@ export default StyleSheet.create({
     margin: 20,
     borderRadius: 8,
     width: '90%',
-  },
-  
-  // Map existing style classes that might be referenced elsewhere
-  settingsSection: {
-    width: '90%',
-    marginBottom: 25,
-  },
-  settingText: {
-    fontSize: 16,
-    color: '#333',
-  },
+  }
 });

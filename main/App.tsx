@@ -16,6 +16,7 @@ import FilterScreen from 'app/screens/filter';
 import FriendsListScreen from 'app/screens/friendsList';
 import CreateGroupScreen from 'app/screens/createGroup';
 import GroupInviteScreen from 'app/screens/groupInvite';
+import JoinGroupScreen from 'app/screens/joinGroup/joinGroup';
 import TitleComponent from '../src/components/Title-Dark/title-animated';
 import { styles, DRAWER_WIDTH } from './style';
 import { UserProvider } from '../src/context/UserContext';
@@ -31,6 +32,7 @@ type StackParamList = {
   DrawerNavigator: undefined;
   Filter: undefined;
   CreateGroup: undefined;
+  JoinGroup: undefined;
   FilterGroup: undefined;
 };
 
@@ -40,6 +42,7 @@ type TabParamList = {
   'My Profile': undefined;
   'FriendsList': undefined;
   'GroupInvite': undefined;
+  'JoinGroup': undefined;
   'Filters': undefined;
   'CreateGroup': undefined;
   'FilterGroup': undefined;
@@ -154,6 +157,7 @@ export default function App() {
             <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} />
             <Stack.Screen name= "CreateGroup" component={CreateGroupScreen} />
             <Stack.Screen name= "FilterGroup" component={FilterGroupScreen} />
+            <Stack.Screen name= "JoinGroup" component={JoinGroupScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </UserProvider>

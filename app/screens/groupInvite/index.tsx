@@ -10,7 +10,7 @@ import {
   Alert, 
   ActivityIndicator 
 } from 'react-native';
-import TitleComponent from 'src/components/Title-Dark/title-animated';
+import TitleComponent from 'src/components/Title-Light/title-animated';
 import { useUser } from 'src/context/UserContext';
 import QRCode from 'react-native-qrcode-svg';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -42,8 +42,18 @@ const GroupInviteScreen: React.FC<GroupInviteScreenProps> = ({ navigation, route
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Generate a random invite code (only used if needed)
+  const generateInviteCode = (): string => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
+
   useEffect(() => {
-    const fetchGroupAndGenerateCode = async () => {
+    const fetchGroupDetails = async () => {
       // Safely retrieve the groupId from route params
       const groupId = route.params?.groupId;
       if (!groupId) {
@@ -53,33 +63,34 @@ const GroupInviteScreen: React.FC<GroupInviteScreenProps> = ({ navigation, route
       }
 
       try {
-        // Fetch group details using the groupId (group details are stored in the group document)
+        // Fetch group details using the groupId
         const groupDoc = await getDoc(doc(db, 'groups', groupId));
         if (!groupDoc.exists()) {
           setError('Group not found');
           setLoading(false);
           return;
         }
+        
         const groupData = groupDoc.data();
         setGroupName(groupData.groupName);
 
-        // Generate a random invite code
-        const generateInviteCode = (): string => {
-          const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-          let code = '';
-          for (let i = 0; i < 6; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
-          }
-          return code;
-        };
-
-        const code = generateInviteCode();
-
-        // Update the group document with the invite code and expiry (using a server timestamp if needed)
-        await updateDoc(doc(db, 'groups', groupId), {
-          inviteCode: code,
-          inviteExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // expires in 24 hours
-        });
+        let code = groupData.inviteCode;
+        let codeExpiry = groupData.inviteExpiry;
+        let needNewCode = false;
+        
+        // Check if code exists and is still valid
+        if (!code || !codeExpiry || (codeExpiry.toDate && codeExpiry.toDate() < new Date())) {
+          // Code is missing or expired, generate a new one
+          needNewCode = true;
+          code = generateInviteCode();
+          codeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // expires in 24 hours
+          
+          // Update the group document with the new invite code and expiry
+          await updateDoc(doc(db, 'groups', groupId), {
+            inviteCode: code,
+            inviteExpiry: codeExpiry
+          });
+        }
 
         setInviteCode(code);
 
@@ -92,16 +103,17 @@ const GroupInviteScreen: React.FC<GroupInviteScreenProps> = ({ navigation, route
           invitedBy: userData?.username || 'User',
           timestamp: new Date().toISOString()
         });
+        
         setQrValue(value);
         setLoading(false);
       } catch (error) {
-        console.error('Error generating invite:', error);
-        setError('Failed to generate invite code');
+        console.error('Error fetching group details:', error);
+        setError('Failed to retrieve group information');
         setLoading(false);
       }
     };
 
-    fetchGroupAndGenerateCode();
+    fetchGroupDetails();
   }, [route.params, userData]);
 
   const copyCodeToClipboard = async (): Promise<void> => {
@@ -131,7 +143,7 @@ const GroupInviteScreen: React.FC<GroupInviteScreenProps> = ({ navigation, route
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#6200ee" />
-        <Text style={styles.loadingText}>Generating invite code...</Text>
+        <Text style={styles.loadingText}>Loading invite details...</Text>
       </View>
     );
   }

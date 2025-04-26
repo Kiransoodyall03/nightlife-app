@@ -239,17 +239,33 @@ const Group: React.FC<{ navigation: any }> = ({ navigation }) => {
     navigation.navigate('GroupFilter', { groupId });
   };
 
+  // New function to navigate to invite screen
+  const handleInviteMembers = (groupId: string) => {
+    navigation.navigate('GroupInvite', { groupId });
+  };
+
+  // New function to navigate to join group screen
+  const handleJoinGroup = () => {
+    navigation.navigate('JoinGroup');
+  };
+
   const renderGroupCircles = () => {
     if (groups.length === 0) {
       return (
         <View style={styles.groupsContainer}>
           <Text style={styles.groupsHeader}>Your Groups</Text>
-          <View style={styles.createGroupButtonContainer}>
+          <View style={styles.buttonsContainer}>
             <TouchableOpacity
-              style={styles.createGroupButton}
+              style={[styles.actionButton, styles.createGroupButton]}
               onPress={() => navigation.navigate('CreateGroup')}
             >
-              <Text style={styles.createGroupButtonText}>Create Group</Text>
+              <Text style={styles.actionButtonText}>Create Group</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.joinGroupButton]}
+              onPress={handleJoinGroup}
+            >
+              <Text style={styles.actionButtonText}>Join Group</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -291,12 +307,32 @@ const Group: React.FC<{ navigation: any }> = ({ navigation }) => {
           ))}
         </ScrollView>
         
-        <View style={styles.createGroupButtonContainer}>
+        {/* Conditional rendering based on whether a group is selected */}
+        <View style={styles.buttonsContainer}>
+          {selectedGroupId ? (
+            // Invite Member button when a group is selected
+            <TouchableOpacity
+              style={[styles.actionButton, styles.inviteButton]}
+              onPress={() => handleInviteMembers(selectedGroupId)}
+            >
+              <Text style={styles.actionButtonText}>Invite Members</Text>
+            </TouchableOpacity>
+          ) : (
+            // Create Group button when no group is selected
+            <TouchableOpacity
+              style={[styles.actionButton, styles.createGroupButton]}
+              onPress={() => navigation.navigate('CreateGroup')}
+            >
+              <Text style={styles.actionButtonText}>Create Group</Text>
+            </TouchableOpacity>
+          )}
+          
+          {/* Always show Join Group button */}
           <TouchableOpacity
-            style={styles.createGroupButton}
-            onPress={() => navigation.navigate('CreateGroup')}
+            style={[styles.actionButton, styles.joinGroupButton]}
+            onPress={handleJoinGroup}
           >
-            <Text style={styles.createGroupButtonText}>Create Group</Text>
+            <Text style={styles.actionButtonText}>Join Group</Text>
           </TouchableOpacity>
         </View>
         
@@ -390,10 +426,6 @@ const Group: React.FC<{ navigation: any }> = ({ navigation }) => {
   // Main component return - moved outside of renderGroupCircles
   return (
     <View style={styles.container}>
-      {/* Header with title */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Groups</Text>
-      </View>
       
       {/* Top section: Group circles */}
       {renderGroupCircles()}

@@ -293,4 +293,36 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 12,
+    paddingHorizontal: 16,
+    width: '100%',
+  },
+  
+  // Base styles for action buttons
+  actionButton: {
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    elevation: 2,
+    flex: 1,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  joinGroupButton: {
+    backgroundColor: '#03DAC6',
+  },
+  
+  inviteButton: {
+    backgroundColor: '#BB86FC',
+  },
 });

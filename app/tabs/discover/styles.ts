@@ -8,6 +8,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
   },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 12,
+    paddingHorizontal: 16,
+    width: '100%',
+  },
   dashboard: {
     height: 60, 
     backgroundColor: '#fff',
