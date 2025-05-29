@@ -11,6 +11,7 @@ export interface FirebaseAuthError extends Error {
     user?: any;
     error?: Error;
     filterId?: string;
+    groupId?: string;
   };
 
   export interface UserData {
@@ -21,13 +22,7 @@ export interface FirebaseAuthError extends Error {
     uid: string;
     createdAt: Date;
     filterId: any;
-  }
-  
-  export interface GroupData{
-    groupId: string;
-    groupnName: string;
-    members: string[];
-    createdAt: Date;
+    groupIds?: string[];
   }
   export interface AuthUser {
     username: string;
@@ -47,6 +42,16 @@ export interface FirebaseAuthError extends Error {
     latitude: number;
     longitude: number;
     address?: string;
+  };
+
+  export interface GroupData {
+    groupId: string;
+    groupName: string;
+    members?: string[];
+    groupPicture: string;
+    isActive: boolean;
+    filters?: string[];
+    createdAt: Date;
   };
 
   export interface UserContext{

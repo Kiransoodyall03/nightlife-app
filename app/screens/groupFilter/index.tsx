@@ -8,13 +8,15 @@ import { useNotification } from 'src/components/Notification/NotificationContext
 
 const NUM_COLUMNS = 3;
 
-const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
+const GroupFilterScreen = ({ navigation, route }: { navigation: NavigationProp<any>, route: any }) => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const {showError, showSuccess} = useNotification();
-  const { handleFilters} = useAuth();
+  const { showError, showSuccess } = useNotification();
+  const { handleFilters } = useAuth();
   const { user } = useUser();
+  const returnData = route.params?.returnData || {};
+
 
   // Replace with actual API call to fetch place types
   useEffect(() => {
@@ -45,46 +47,40 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         'event_venue', 'comedy_club', 'concert_hall',
         'convention_center'];
     setAvailableTypes(typesFromAPI);
-  }, []);
+    
+    // If there are existing filters passed from CreateGroup screen, initialize with them
+    if (route.params?.existingFilters) {
+      setSelectedTypes(route.params.existingFilters.map((filter: string) => filter.replace(/_/g, ' ')));
+    }
+  }, [route.params]);
 
   const formattedArray = availableTypes.map(item => item.replace(/_/g, ' '));
+  
   const toggleType = (type: string) => {
     setSelectedTypes(prev => 
       prev.includes(type) 
         ? prev.filter(t => t !== type) 
-        : [...prev, type]
+        : selectedTypes.length < 5 ? [...prev, type] : prev
     );
   };
 
-  const handleSubmitFilters = async () => {
+  const handleDone = () => {
     if (selectedTypes.length < 3) {
       showError('Please select at least 3 interests');
       return;
     }
-  
-    setIsSubmitting(true);
     
-    try {
-      const result = await handleFilters({
-        filterId: user?.uid || '',
-        userId: user?.uid,
-        filters: selectedTypes.map(type => type.replace(/ /g, '_')),
-        isFiltered: selectedTypes.length > 0,
-      });
-  
-      if (result.success) {
-        showSuccess("Successfully Saved Filters");
-        navigation.navigate("DrawerNavigator");
-      } else if (result.error) {
-        showError(result.error.message);
-      }
-    } catch (error) {
-      showError('Failed to save filters. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Convert selected types back to original format with underscores
+    const formattedFilters = selectedTypes.map(type => type.replace(/ /g, '_'));
+    
+    // Navigate back to CreateGroup screen with the selected filters
+    navigation.navigate("GroupCreate", { 
+      selectedFilters: formattedFilters,
+      groupName: returnData.groupName,
+      groupImage: returnData.groupImage,
+    });
   };
-  
+
   // Calculate number of rows for grid height estimation
   const numRows = Math.ceil(formattedArray.length / NUM_COLUMNS);
 
@@ -99,9 +95,9 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
           >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Interests</Text>
+          <Text style={styles.title}>Group Interests</Text>
           <TouchableOpacity 
-            onPress={handleSubmitFilters}
+            onPress={handleDone}
             style={styles.doneButton}
             disabled={isSubmitting}
           >
@@ -172,4 +168,4 @@ const FilterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   );
 };
 
-export default FilterScreen;
+export default GroupFilterScreen;

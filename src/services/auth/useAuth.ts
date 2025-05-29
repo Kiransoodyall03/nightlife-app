@@ -3,12 +3,12 @@ import { handleLogin } from './login';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { addDoc, collection, doc, setDoc, updateDoc, GeoPoint, runTransaction, 
-  query,where,getDoc } from 'firebase/firestore';
-import { AuthResult, AuthUser, FilterData, UserData } from './types';
+  query, where, getDoc } from 'firebase/firestore';
+import { AuthResult, AuthUser, FilterData, GroupData, UserData } from './types';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
-  const [ userData, setUserData] = useState<UserData | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async (
@@ -64,67 +64,121 @@ export const useAuth = () => {
     }
   };
 
- // This would go in your handleFilters function
-const handleFilters = async (filterData: FilterData): Promise<AuthResult> => {
-  setLoading(true);
-  setError(null);
-  
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
+  // This would go in your handleFilters function
+  const handleFilters = async (filterData: FilterData): Promise<AuthResult> => {
+    setLoading(true);
+    setError(null);
     
-    // Get current user data
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    const userData = userDoc.data();
-    const currentFilterId = userData?.filterId;
-    
-    let newFilterId;
-    
-    // If user already has a filter, update it
-    if (currentFilterId && currentFilterId !== "") {
-      await updateDoc(doc(db, 'filters', currentFilterId), {
-        ...filterData,
-        userId: user.uid,
-        filterId: currentFilterId
-      });
-      newFilterId = currentFilterId;
-    } else {
-      // Create new filter
-      const filterRef = doc(collection(db, 'filters'));
-      await setDoc(filterRef, {
-        ...filterData,
-        userId: user.uid,
-        filterId: filterRef.id
-      });
-      newFilterId = filterRef.id;
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
       
-      // Update user document with new filterId
-      await updateDoc(doc(db, 'users', user.uid), {
-        filterId: filterRef.id
-      });
+      // Get current user data
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data();
+      const currentFilterId = userData?.filterId;
+      
+      let newFilterId;
+      
+      // If user already has a filter, update it
+      if (currentFilterId && currentFilterId !== "") {
+        await updateDoc(doc(db, 'filters', currentFilterId), {
+          ...filterData,
+          userId: user.uid,
+          filterId: currentFilterId
+        });
+        newFilterId = currentFilterId;
+      } else {
+        // Create new filter
+        const filterRef = doc(collection(db, 'filters'));
+        await setDoc(filterRef, {
+          ...filterData,
+          userId: user.uid,
+          filterId: filterRef.id
+        });
+        newFilterId = filterRef.id;
+        
+        // Update user document with new filterId
+        await updateDoc(doc(db, 'users', user.uid), {
+          filterId: filterRef.id
+        });
+      }
+      
+      // Important: Update local state to reflect the changes
+      if (userData) {
+        setUserData(prev => ({
+          ...prev!,
+          filterId: newFilterId
+        }));
+      }
+      
+      return { success: true, filterId: newFilterId };
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      setError(`Filter update failed: ${errorMessage}`);
+      return {
+        success: false,
+        error: new Error(`Filter Error: ${errorMessage}`)
+      };
+    } finally {
+      setLoading(false);
     }
-    
-    // Important: Update local state to reflect the changes
-    if (userData) {
-      setUserData(prev => ({
-        ...prev!,
-        filterId: newFilterId
-      }));
-    }
-    
-    return { success: true, filterId: newFilterId };
-  } catch (error) {
-    const errorMessage = (error as Error).message;
-    setError(`Filter update failed: ${errorMessage}`);
-    return {
-      success: false,
-      error: new Error(`Filter Error: ${errorMessage}`)
-    };
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
+  const createGroup = async (groupData: GroupData): Promise<AuthResult> => {
+    setLoading(true);
+    setError(null);
+  
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+  
+      // Create group document
+      const groupRef = doc(collection(db, 'groups'));
+      const groupId = groupRef.id;
+      const createdAt = new Date();
+  
+      await setDoc(groupRef, {
+        groupid: groupId,
+        groupName: groupData.groupName,
+        members: [user.uid],
+        groupPicture: groupData.groupPicture || null,
+        filtersId: groupData.filters || [],
+        createdAt: createdAt,
+        isActive: false // Initialize as inactive
+      });
+  
+      // Get current user document to check existing groups
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const currentGroups = userData.groupIds || []; // Use array instead of single groupId
+        
+        // Add new groupId to the array if not already present
+        if (!currentGroups.includes(groupId)) {
+          await updateDoc(userDocRef, {
+            groupIds: [...currentGroups, groupId]
+          });
+        }
+      } else {
+        // If user document doesn't exist, create it with the new groupId
+        await setDoc(userDocRef, {
+          groupIds: [groupId],
+          // Add other user fields as needed
+        }, { merge: true });
+      }
+  
+      return { success: true, groupId: groupId };
+    } catch (error) {
+      console.error('Group creation error:', error);
+      setError('Group creation failed: ' + (error as Error).message);
+      return { success: false, error: error as Error };
+    } finally {
+      setLoading(false);
+    }
+  };
   const performLogin = async (email: string, password: string): Promise<AuthResult> => {
     setLoading(true);
     setError(null);
@@ -146,5 +200,5 @@ const handleFilters = async (filterData: FilterData): Promise<AuthResult> => {
     }
   };
 
-  return { handleRegister, performLogin, loading, error, handleFilters };
+  return { handleRegister, performLogin, loading, error, handleFilters, createGroup };
 };

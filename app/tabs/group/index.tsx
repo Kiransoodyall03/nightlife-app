@@ -1,9 +1,13 @@
-// LocationGroups.tsx
-import React from 'react';
-import { View, Text, FlatList, Image, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, Image, ScrollView, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
 import { styles } from './styles';
 import { useNotification } from 'src/components/Notification/NotificationContext';
-
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import GroupCreateModal from '../../../src/components/createGroupModal/GroupCreateModal';
+import { GroupData, LocationData } from 'src/services/auth/types';
+import { db } from '../../../src/services/firebase/config'; // Add Firebase config import
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'; // Add Firestore imports
+import { useUser } from 'src/context/UserContext';
 // Types
 interface MatchedUser {
   id: string;
@@ -19,12 +23,25 @@ interface Location {
   matchedUsers: MatchedUser[];
   partnerType: string;
   extraUserCount?: number;
+  groupId: string;
 }
 
-const LocationGroups: React.FC = () => {
+// Extended GroupData interface to include group name display
+interface UserGroup extends GroupData {
+  groupName: string;
+  groupPicture: string;
+}
+
+const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const { showSuccess, showError } = useNotification();
+  // State management
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const {user, userData} = useUser();
+    // Sample locations data (keeping existing structure)
   const locations: Location[] = [
-    // Keep your existing sample data
     {
       id: '1',
       name: "Jo'Anna MeltBar",
@@ -35,121 +52,192 @@ const LocationGroups: React.FC = () => {
         { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
         { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' }
       ],
-      partnerType: 'Uber'
+      partnerType: 'Uber',
+      groupId: 'g1'
     },
     {
       id: '2',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
+      name: "Craft Burger Co.",
+      rating: 4.5,
+      distance: 3,
       image: 'https://via.placeholder.com/100',
       matchedUsers: [
         { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
         { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' },
         { id: 'u3', profileImage: 'https://via.placeholder.com/50/00FF00' }
       ],
-      partnerType: 'Uber'
+      partnerType: 'Uber',
+      groupId: 'g1'
     },
     {
       id: '3',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
+      name: "Starbeans Coffee",
+      rating: 4.3,
+      distance: 2,
       image: 'https://via.placeholder.com/100',
       matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' }
-      ],
-      partnerType: 'Uber'
-    },
-    {
-      id: '4',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' },
-        { id: 'u3', profileImage: 'https://via.placeholder.com/50/00FF00' }
+        { id: 'u4', profileImage: 'https://via.placeholder.com/50/FF0000' },
+        { id: 'u5', profileImage: 'https://via.placeholder.com/50/0000FF' }
       ],
       partnerType: 'Uber',
-      extraUserCount: 3
+      groupId: 'g2'
     },
-    {
-      id: '5',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' },
-        { id: 'u3', profileImage: 'https://via.placeholder.com/50/00FF00' }
-      ],
-      partnerType: 'Uber',
-      extraUserCount: 3
-    },
-    {
-      id: '6',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' },
-        { id: 'u3', profileImage: 'https://via.placeholder.com/50/00FF00' }
-      ],
-      partnerType: 'Uber',
-      extraUserCount: 3
-    },
-    {
-      id: '7',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' },
-        { id: 'u3', profileImage: 'https://via.placeholder.com/50/00FF00' }
-      ],
-      partnerType: 'Uber',
-      extraUserCount: 3
-    },
-    {
-      id: '8',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' },
-        { id: 'u3', profileImage: 'https://via.placeholder.com/50/00FF00' }
-      ],
-      partnerType: 'Uber',
-      extraUserCount: 3
-    }
+    // Add more locations as needed...
   ];
+
+  // Fetch user's groups on component mount
+  useEffect(() => {
+    fetchUserGroups();
+  }, []);
+
+  const fetchUserGroups = async () => {
+    if (!userData?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Get user document to find their group IDs
+      const userDocRef = doc(db, 'users', user?.uid || "");
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        console.log('User document not found');
+        setUserGroups([]);
+        setLoading(false);
+        return;
+      }
+
+      const userData = userDoc.data();
+      const groupIds = userData.groupIds || [];
+
+      if (groupIds.length === 0) {
+        setUserGroups([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch all group documents for the user's groups
+      const groupPromises = groupIds.map(async (groupId: string) => {
+        const groupDocRef = doc(db, 'groups', groupId);
+        const groupDoc = await getDoc(groupDocRef);
+        
+        if (groupDoc.exists()) {
+          const groupData = groupDoc.data();
+          return {
+            groupId: groupDoc.id,
+            groupName: groupData.groupName || 'Unnamed Group',
+            groupPicture: groupData.groupPicture || 'https://via.placeholder.com/100',
+            isActive: groupData.isActive || false,
+            createdAt: groupData.createdAt?.toDate() || new Date(),
+            members: groupData.members || [],
+            filters: groupData.filtersId || []
+          } as UserGroup;
+        }
+        return null;
+      });
+
+      const groupsData = await Promise.all(groupPromises);
+      const validGroups = groupsData.filter(group => group !== null) as UserGroup[];
+      
+      setUserGroups(validGroups);
+    } catch (error) {
+      console.error('Error fetching user groups:', error);
+      showError('Failed to load your groups');
+      setUserGroups([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter locations based on selected group
+  const filteredLocations = selectedGroupId 
+    ? locations.filter(location => location.groupId === selectedGroupId)
+    : locations;
 
   const openUberApp = () => {
     Linking.openURL('uber://').catch(() => Linking.openURL('https://www.uber.com/'));
   };
 
-  const MatchedLocationsScroll = () => (
-    <View style={styles.matchedLocationsContainer}>
-      <Text style={styles.sectionTitle}>Your Matched Locations</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalScrollContent}>
-        {locations.map((location) => (
-          <TouchableOpacity key={location.id} style={styles.locationCircleContainer}>
-            <Image source={{ uri: location.image }} style={styles.locationCircleImage} />
-            <View style={styles.activeIndicator} />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+  const navigateToCreateGroup = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleGroupSelect = (groupId: string) => {
+    setSelectedGroupId(prevId => prevId === groupId ? null : groupId);
+  };
+
+  const handleModalClose = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleGroupCreated = () => {
+    showSuccess('Group created successfully!');
+    setIsModalVisible(false);
+    // Refresh the groups list
+    fetchUserGroups();
+  };
+
+  const GroupsScroll = () => (
+    <View>
+      <View style={styles.matchedLocationsContainer}>
+        <Text style={styles.sectionTitle}>Your Groups</Text>
+        
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#4A90E2" />
+            <Text style={styles.loadingText}>Loading groups...</Text>
+          </View>
+        ) : userGroups.length > 0 ? (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScrollContent}
+          >
+            {userGroups.map((group) => (
+              <TouchableOpacity 
+                key={group.groupId} 
+                style={[
+                  styles.groupItemContainer,
+                  selectedGroupId === group.groupId && styles.selectedGroupContainer
+                ]}
+                onPress={() => handleGroupSelect(group.groupId)}
+              >
+                <View style={styles.locationCircleContainer}>
+                  <Image 
+                    source={{ uri: group.groupPicture || 'https://via.placeholder.com/100' }} 
+                    style={styles.locationCircleImage} 
+                  />
+                  {group.isActive && <View style={styles.activeIndicator} />}
+                </View>
+                <Text style={styles.groupNameText} numberOfLines={1}>
+                  {group.groupName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyGroupsContainer}>
+            <Text style={styles.emptyGroupsText}>
+              You haven't joined any groups yet
+            </Text>
+            <Text style={styles.emptyGroupsSubtext}>
+              Create your first group to get started!
+            </Text>
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.createGroupButtonContainer}>
+        <TouchableOpacity 
+          style={styles.createGroupButton}
+          onPress={navigateToCreateGroup}
+        >
+          <Text style={styles.createGroupButtonText}>Create Group</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -196,14 +284,30 @@ const LocationGroups: React.FC = () => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={locations}
+        data={filteredLocations}
         renderItem={({ item }) => <LocationItem item={item} />}
         keyExtractor={item => item.id}
-        ListHeaderComponent={<MatchedLocationsScroll />}
+        ListHeaderComponent={<GroupsScroll />}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ListEmptyComponent={
+          <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyStateText}>
+              {selectedGroupId 
+                ? "No locations available for the selected group" 
+                : "No locations available"
+              }
+            </Text>
+          </View>
+        }
+      />
+      
+      <GroupCreateModal
+        visible={isModalVisible}
+        onClose={handleModalClose}
+        onGroupCreated={handleGroupCreated}
       />
     </View>
   );
 };
 
-export default LocationGroups;
+export default GroupScreen;

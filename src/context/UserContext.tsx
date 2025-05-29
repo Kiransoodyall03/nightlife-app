@@ -113,7 +113,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const blob = await response.blob();
         
         // Use the user's UID in the storage path
-        const storageRef = ref(storage, `profile-pictures/${user.uid}`);
+        const storageRef = ref(storage, `user-images/${user.uid}`);
         
         await uploadBytes(storageRef, blob);
         const downloadURL = await getDownloadURL(storageRef);
@@ -135,6 +135,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       throw error;
     }
   };
+  
   const fetchLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();

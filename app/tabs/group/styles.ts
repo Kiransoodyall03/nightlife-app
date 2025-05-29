@@ -161,4 +161,97 @@ export const styles = StyleSheet.create({
     backgroundColor: '#EDEFF2',
     marginHorizontal: 20,
   },
+  createGroupButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  createGroupButton: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF1493',
+    width: '80%',
+    marginVertical: 8,
+  },
+  createGroupButtonText: {
+    color: '#FF1493',
+    fontWeight: '500',
+    fontSize: 16,
+  },
+  selectedGroupContainer: {
+    borderWidth: 2,
+    borderColor: '#4CAF50', 
+    transform: [{ scale: 1.05 }], 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  emptyStateContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 200,
+  },
+  
+  emptyStateText: {
+    fontSize: 16,
+    color: '#757575',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontWeight: '500',
+  },
+  // Add these styles to your existing styles object
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  
+  // Group item container with name below
+  groupItemContainer: {
+    alignItems: 'center',
+    marginRight: 15,
+    maxWidth: 80, // Constrain width for text wrapping
+  },
+  
+  // Group name text below circle
+  groupNameText: {
+    fontSize: 12,
+    color: '#333',
+    textAlign: 'center',
+    marginTop: 5,
+    fontWeight: '500',
+  },
+  
+  // Empty groups state
+  emptyGroupsContainer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+  },
+  emptyGroupsText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  emptyGroupsSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+
 });
