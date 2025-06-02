@@ -35,6 +35,14 @@ export const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
+  selectedLocationCircleImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 3,
+    borderColor: '#4CAF50',
+  },
   activeIndicator: {
     position: 'absolute',
     bottom: 4,
@@ -158,7 +166,7 @@ export const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: '#EDEFF2',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
   },
   createGroupButtonContainer: {
@@ -252,6 +260,30 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+  },
+
+  // Section header with refresh button
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+
+  // Refresh button styles
+  refreshButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 18,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+
+  refreshButtonText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
   },
 
 });

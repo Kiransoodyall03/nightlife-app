@@ -5,9 +5,10 @@ import { useNotification } from 'src/components/Notification/NotificationContext
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import GroupCreateModal from '../../../src/components/createGroupModal/GroupCreateModal';
 import { GroupData, LocationData } from 'src/services/auth/types';
-import { db } from '../../../src/services/firebase/config'; // Add Firebase config import
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'; // Add Firestore imports
+import { db } from '../../../src/services/firebase/config';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useUser } from 'src/context/UserContext';
+
 // Types
 interface MatchedUser {
   id: string;
@@ -39,8 +40,10 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const {user, userData} = useUser();
-    // Sample locations data (keeping existing structure)
+
+  // Sample locations data (keeping existing structure)
   const locations: Location[] = [
     {
       id: '1',
@@ -82,40 +85,43 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       partnerType: 'Uber',
       groupId: 'g2'
     },
-    // Add more locations as needed...
   ];
 
   // Fetch user's groups on component mount
   useEffect(() => {
     fetchUserGroups();
-  }, []);
+  }, [userData?.uid]); // Added dependency to refetch when user changes
 
-  const fetchUserGroups = async () => {
-    if (!userData?.uid) {
+  const fetchUserGroups = async (showLoader: boolean = true) => {
+    if (!userData?.uid && !user?.uid) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
 
       // Get user document to find their group IDs
-      const userDocRef = doc(db, 'users', user?.uid || "");
+      const userDocRef = doc(db, 'users', user?.uid || userData?.uid || "");
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
         console.log('User document not found');
         setUserGroups([]);
-        setLoading(false);
         return;
       }
 
-      const userData = userDoc.data();
-      const groupIds = userData.groupIds || [];
+      const userDocData = userDoc.data();
+      const groupIds = userDocData.groupIds || [];
+
+      console.log('User groupIds:', groupIds); // Debug log
 
       if (groupIds.length === 0) {
         setUserGroups([]);
-        setLoading(false);
         return;
       }
 
@@ -142,6 +148,7 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       const groupsData = await Promise.all(groupPromises);
       const validGroups = groupsData.filter(group => group !== null) as UserGroup[];
       
+      console.log('Fetched groups:', validGroups); // Debug log
       setUserGroups(validGroups);
     } catch (error) {
       console.error('Error fetching user groups:', error);
@@ -149,6 +156,7 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       setUserGroups([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -173,17 +181,36 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     setIsModalVisible(false);
   };
 
-  const handleGroupCreated = () => {
+  const handleGroupCreated = async () => {
     showSuccess('Group created successfully!');
     setIsModalVisible(false);
-    // Refresh the groups list
-    fetchUserGroups();
+    
+    // Add a small delay to ensure Firestore has been updated
+    setTimeout(async () => {
+      await fetchUserGroups(false); // Don't show loading spinner for refresh
+    }, 1000);
+  };
+
+  // Add pull-to-refresh functionality
+  const onRefresh = async () => {
+    await fetchUserGroups(false);
   };
 
   const GroupsScroll = () => (
     <View>
       <View style={styles.matchedLocationsContainer}>
-        <Text style={styles.sectionTitle}>Your Groups</Text>
+        <View style={styles.sectionHeaderContainer}>
+          <Text style={styles.sectionTitle}>Your Groups</Text>
+          <TouchableOpacity 
+            onPress={onRefresh}
+            disabled={refreshing}
+            style={styles.refreshButton}
+          >
+            <Text style={styles.refreshButtonText}>
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -208,7 +235,10 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
                 <View style={styles.locationCircleContainer}>
                   <Image 
                     source={{ uri: group.groupPicture || 'https://via.placeholder.com/100' }} 
-                    style={styles.locationCircleImage} 
+                    style={[
+                      styles.locationCircleImage,
+                      selectedGroupId === group.groupId && styles.selectedLocationCircleImage
+                    ]} 
                   />
                   {group.isActive && <View style={styles.activeIndicator} />}
                 </View>
@@ -289,6 +319,8 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         keyExtractor={item => item.id}
         ListHeaderComponent={<GroupsScroll />}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={styles.emptyStateContainer}>
             <Text style={styles.emptyStateText}>

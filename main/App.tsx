@@ -10,7 +10,6 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import DiscoverScreen from '../app/tabs/discover';
 import GroupScreen from '../app/tabs/group';
-import GroupCreateScreen from 'app/screens/groupCreate';
 import GroupFilterScreen from 'app/screens/groupFilter';
 import ProfileScreen from '../app/tabs/profile';
 import LoginScreen from '../app/screens/login';
@@ -28,7 +27,6 @@ type StackParamList = {
   Register: undefined; // Add SignUp route
   DrawerNavigator: undefined;
   Filter: undefined;
-  GroupCreate: undefined;
   GroupFilter: undefined;
 };
 
@@ -38,7 +36,6 @@ type TabParamList = {
   'My Group': undefined;
   'My Profile': undefined;
   'Filters': undefined;
-  'GroupCreate': undefined;
   'GroupFilter': undefined;
 };
 
@@ -169,7 +166,6 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={SignUpScreen} />
         <Stack.Screen name="Filter" component={FilterScreen} />
-        <Stack.Screen name="GroupCreate" component={GroupCreateScreen} />
         <Stack.Screen name="GroupFilter" component={GroupFilterScreen} />
 
         {/* Main Tabs */}
