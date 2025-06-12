@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Image, ScrollView, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Image, ScrollView, TouchableOpacity, Linking, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { styles } from './styles';
 import { useNotification } from 'src/components/Notification/NotificationContext';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import GroupCreateModal from '../../../src/components/createGroupModal/GroupCreateModal';
 import { GroupData, LocationData } from 'src/services/auth/types';
 import { db } from '../../../src/services/firebase/config';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { useUser } from 'src/context/UserContext';
+import { useAuth } from 'src/services/auth/useAuth';
+import GroupCodeModal from 'src/components/InviteModal';
+import LeaveGroupModal from 'src/components/LeaveGroupModal';
 
 // Types
 interface MatchedUser {
@@ -27,20 +30,22 @@ interface Location {
   groupId: string;
 }
 
-// Extended GroupData interface to include group name display
-interface UserGroup extends GroupData {
-  groupName: string;
-  groupPicture: string;
-}
 
 const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const { showSuccess, showError } = useNotification();
+  const { createGroup, joinGroup, leaveGroup, deleteGroup, error } = useAuth();
   // State management
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
+  const [isGroupCodeModalVisible, setIsGroupCodeModalVisible] = useState(false);
+  const [isLeaveGroupModalVisible, setIsLeaveGroupModalVisible] = useState(false);
+  const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [joinGroupCode, setJoinGroupCode] = useState('');
+  const [userGroups, setUserGroups] = useState<GroupData[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [joiningGroup, setJoiningGroup] = useState<boolean>(false);
   const {user, userData} = useUser();
 
   // Sample locations data (keeping existing structure)
@@ -139,17 +144,25 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
             isActive: groupData.isActive || false,
             createdAt: groupData.createdAt?.toDate() || new Date(),
             members: groupData.members || [],
-            filters: groupData.filtersId || []
-          } as UserGroup;
+            filters: groupData.filtersId || [],
+            ownerId: groupData.ownerId || groupData.createdBy,
+            groupCode: groupData.groupCode// Handle both field names
+          } as GroupData;
         }
         return null;
       });
 
       const groupsData = await Promise.all(groupPromises);
-      const validGroups = groupsData.filter(group => group !== null) as UserGroup[];
+      const validGroups = groupsData.filter(group => group !== null) as GroupData[];
       
       console.log('Fetched groups:', validGroups); // Debug log
       setUserGroups(validGroups);
+      
+      // Update selected group if it's currently selected
+      if (selectedGroupId) {
+        const updatedSelectedGroup = validGroups.find(group => group.groupId === selectedGroupId);
+        setSelectedGroup(updatedSelectedGroup || null);
+      }
     } catch (error) {
       console.error('Error fetching user groups:', error);
       showError('Failed to load your groups');
@@ -173,12 +186,30 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     setIsModalVisible(true);
   };
 
+  const navigateToJoinGroup = () => {
+    setIsJoinModalVisible(true);
+    setJoinGroupCode('');
+  };
+
   const handleGroupSelect = (groupId: string) => {
-    setSelectedGroupId(prevId => prevId === groupId ? null : groupId);
+    const newSelectedId = selectedGroupId === groupId ? null : groupId;
+    setSelectedGroupId(newSelectedId);
+    
+    if (newSelectedId) {
+      const group = userGroups.find(g => g.groupId === newSelectedId);
+      setSelectedGroup(group || null);
+    } else {
+      setSelectedGroup(null);
+    }
   };
 
   const handleModalClose = () => {
     setIsModalVisible(false);
+  };
+
+  const handleJoinModalClose = () => {
+    setIsJoinModalVisible(false);
+    setJoinGroupCode('');
   };
 
   const handleGroupCreated = async () => {
@@ -191,9 +222,106 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     }, 1000);
   };
 
-  // Add pull-to-refresh functionality
+  const handleJoinGroup = async () => {
+    if (!joinGroupCode || joinGroupCode.length !== 6) {
+      showError('Please enter a valid 6-digit group code');
+      return;
+    }
+
+    setJoiningGroup(true);
+
+    try {
+      const result = await joinGroup(joinGroupCode);
+      
+      if (result.success) {
+        showSuccess('Successfully joined the group!');
+        handleJoinModalClose();
+        
+        // Refresh groups
+        setTimeout(async () => {
+          await fetchUserGroups(false);
+        }, 1000);
+      } else {
+        showError(error || 'Failed to join group');
+      }
+    } catch (err) {
+      showError('Failed to join group. Please try again.');
+    } finally {
+      setJoiningGroup(false);
+    }
+  };
+
+ // ... existing code ...
+
+const handleSendInvite = () => {
+  if (selectedGroup) {
+    setIsGroupCodeModalVisible(true);
+    }
+  };
+const handleLeaveGroup = () => {
+  if (selectedGroup){
+    setIsLeaveGroupModalVisible(true);
+  }
+};
+const handleCloseGroupCodeModal = () => {
+  setIsGroupCodeModalVisible(false);
+};
+const handleCloseLeaveGroupModal = () => {
+  setIsLeaveGroupModalVisible(false);
+};
+
+const handleDeleteGroup = () => {
+  // Capture current selectedGroup to avoid staleness
+  const groupToDelete = selectedGroup;
+  if (!groupToDelete) return;
+
+  const currentUserId = user?.uid || userData?.uid || "";
+  const isOwner = groupToDelete.ownerId === currentUserId;
+
+  if (!isOwner) {
+    showError('Only the group owner can delete the group');
+    return;
+  }
+
+  // Wrap in setTimeout
+  setTimeout(() => {
+    Alert.alert(
+      'Delete Group',
+      `Are you sure you want to delete "${groupToDelete.groupName}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await deleteGroup(groupToDelete.groupId);
+              if (result.success) {
+                showSuccess('Group deleted successfully');
+                setSelectedGroupId(null);
+                setSelectedGroup(null);
+                setTimeout(async () => await fetchUserGroups(false), 1000);
+              } else {
+                showError(error || 'Failed to delete group');
+              }
+            } catch (err) {
+              showError('Failed to delete group. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  }, 0);
+};
+
+
   const onRefresh = async () => {
     await fetchUserGroups(false);
+  };
+
+  const isGroupOwner = (group: GroupData) => {
+    const currentUserId = user?.uid || userData?.uid || "";
+    return group.ownerId === currentUserId;
   };
 
   const GroupsScroll = () => (
@@ -260,13 +388,52 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         )}
       </View>
       
-      <View style={styles.createGroupButtonContainer}>
-        <TouchableOpacity 
-          style={styles.createGroupButton}
-          onPress={navigateToCreateGroup}
-        >
-          <Text style={styles.createGroupButtonText}>Create Group</Text>
-        </TouchableOpacity>
+      {/* Group Action Buttons */}
+      <View style={styles.groupActionButtonsContainer}>
+        {selectedGroup ? (
+          // Show group management buttons when a group is selected
+          <View style={styles.groupActionButtonsRow}>
+            <TouchableOpacity 
+              style={[styles.groupActionButton, styles.sendInviteButton]}
+              onPress={handleSendInvite}
+            >
+              <Text style={styles.groupActionButtonText}>Send Invite</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.groupActionButton, styles.leaveGroupButton]}
+              onPress={handleLeaveGroup}
+            >
+              <Text style={styles.groupActionButtonText}>Leave Group</Text>
+            </TouchableOpacity>
+            
+            {isGroupOwner(selectedGroup) && (
+              <TouchableOpacity 
+                style={[styles.groupActionButton, styles.deleteGroupButton]}
+                onPress={handleDeleteGroup}
+              >
+                <Text style={styles.groupActionButtonText}>Delete Group</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          // Show create/join buttons when no group is selected
+          <View style={styles.createJoinButtonContainer}>
+            <TouchableOpacity 
+              style={styles.createGroupButton}
+              onPress={navigateToCreateGroup}
+            >
+              <Text style={styles.createGroupButtonText}>Create Group</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.joinGroupButton}
+              onPress={navigateToJoinGroup}
+            >
+              <Text style={styles.joinGroupButtonText}>Join Group</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -333,10 +500,80 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         }
       />
       
+      {/* Create Group Modal */}
       <GroupCreateModal
         visible={isModalVisible}
         onClose={handleModalClose}
         onGroupCreated={handleGroupCreated}
+      />
+
+      {/* Join Group Modal */}
+      <Modal
+        visible={isJoinModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleJoinModalClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.joinModalContainer}>
+            <Text style={styles.joinModalTitle}>Join Group</Text>
+            <Text style={styles.joinModalSubtitle}>
+              Enter the 6-digit group code to join
+            </Text>
+            
+            <TextInput
+              style={styles.joinCodeInput}
+              value={joinGroupCode}
+              onChangeText={setJoinGroupCode}
+              placeholder="Group Code"
+              maxLength={6}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              keyboardType="default"
+            />
+            
+            <View style={styles.joinModalButtonsContainer}>
+              <TouchableOpacity 
+                style={styles.joinModalCancelButton}
+                onPress={handleJoinModalClose}
+                disabled={joiningGroup}
+              >
+                <Text style={styles.joinModalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.joinModalJoinButton,
+                  joiningGroup && styles.joinModalJoinButtonDisabled
+                ]}
+                onPress={handleJoinGroup}
+                disabled={joiningGroup}
+              >
+                {joiningGroup ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.joinModalJoinButtonText}>Join</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <GroupCodeModal
+        isVisible={isGroupCodeModalVisible}
+        onClose={handleCloseGroupCodeModal}
+        selectedGroup={selectedGroup}
+      />
+      <LeaveGroupModal
+        isVisible={isLeaveGroupModalVisible}
+        onClose={() => setIsLeaveGroupModalVisible(false)}
+        selectedGroup={selectedGroup}
+        onLeaveSuccess={() => {
+          setSelectedGroupId(null);
+          setSelectedGroup(null);
+          fetchUserGroups(false); // Refresh groups without loader
+          showSuccess('Successfully left the group');
+        }}
       />
     </View>
   );

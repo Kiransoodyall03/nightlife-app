@@ -50,8 +50,10 @@ export interface FirebaseAuthError extends Error {
     members?: string[];
     groupPicture: string;
     isActive: boolean;
-    filters?: string[];
+    filtersId?: string[];
     createdAt: Date;
+    ownerId: string;
+    groupCode: string;
   };
 
   export interface UserContext{

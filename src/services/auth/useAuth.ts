@@ -3,8 +3,9 @@ import { handleLogin } from './login';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { addDoc, collection, doc, setDoc, updateDoc, GeoPoint, runTransaction, 
-  query, where, getDoc } from 'firebase/firestore';
+  query, where, getDoc, getDocs, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { AuthResult, AuthUser, FilterData, GroupData, UserData } from './types';
+import { Group } from 'lucide-react-native';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -137,15 +138,20 @@ export const useAuth = () => {
       const groupRef = doc(collection(db, 'groups'));
       const groupId = groupRef.id;
       const createdAt = new Date();
+      
+      // Generate a 6-digit group code
+      const groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
   
       await setDoc(groupRef, {
         groupid: groupId,
         groupName: groupData.groupName,
+        groupCode: groupCode,
         members: [user.uid],
         groupPicture: groupData.groupPicture || null,
-        filtersId: groupData.filters || [],
+        filtersId: groupData.filtersId || [],
         createdAt: createdAt,
-        isActive: false // Initialize as inactive
+        isActive: false, // Initialize as inactive
+        ownerId: user.uid // Track group owner
       });
   
       // Get current user document to check existing groups
@@ -179,6 +185,147 @@ export const useAuth = () => {
       setLoading(false);
     }
   };
+
+  const joinGroup = async (groupCode: string): Promise<AuthResult> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+
+      // Find group by code
+      const groupsRef = collection(db, 'groups');
+      const q = query(groupsRef, where('groupCode', '==', groupCode.toUpperCase()));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        setError('Group not found. Please check the code and try again.');
+        return { success: false, error: new Error('Group not found') };
+      }
+
+      const groupDoc = querySnapshot.docs[0];
+      const groupData = groupDoc.data();
+
+      // Check if user is already a member
+      if (groupData.members && groupData.members.includes(user.uid)) {
+        setError('You are already a member of this group');
+        return { success: false, error: new Error('Already a member') };
+      }
+
+      // Add user to group members
+      await updateDoc(doc(db, 'groups', groupDoc.id), {
+        members: arrayUnion(user.uid)
+      });
+
+      // Add group to user's groupIds
+      await updateDoc(doc(db, 'users', user.uid), {
+        groupIds: arrayUnion(groupDoc.id)
+      });
+
+      return { success: true, groupId: groupDoc.id };
+    } catch (error) {
+      console.error('Error joining group:', error);
+      setError('Failed to join group. Please try again.');
+      return { success: false, error: error as Error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+const leaveGroup = async (groupId: string): Promise<AuthResult> => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
+    
+    const groupDoc = await getDoc(doc(db, 'groups', groupId));
+    if (!groupDoc.exists()) {
+      throw new Error('Group not found');
+    }
+
+    const groupData = groupDoc.data();
+    const currentMembers = groupData.members || [];
+    
+    // Check if user is actually a member of this group
+    if (!currentMembers.includes(user.uid)) {
+      throw new Error('User is not a member of this group');
+    }
+
+    // Remove user from group members
+    await updateDoc(doc(db, 'groups', groupId), {
+      members: arrayRemove(user.uid)
+    });
+
+    // Remove group from user's groupIds
+    await updateDoc(doc(db, 'users', user.uid), {
+      groupIds: arrayRemove(groupId)
+    });
+
+    // Check if this was the last member and delete group if empty
+    if (currentMembers.length === 1) {
+      // This user was the only member, so delete the group
+      await deleteDoc(doc(db, 'groups', groupId));
+      console.log('Group deleted as no members remain');
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error leaving group:', error);
+    setError('Failed to leave group. Please try again.');
+    return { success: false, error: error as Error };
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const deleteGroup = async (groupId: string): Promise<AuthResult> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+
+      // Get group data to check ownership and get members
+      const groupDoc = await getDoc(doc(db, 'groups', groupId));
+      if (!groupDoc.exists()) {
+        throw new Error('Group not found');
+      }
+
+      const groupData = groupDoc.data();
+      
+      // Check if user is the owner
+      if (groupData.ownerId !== user.uid) {
+        setError('Only the group owner can delete the group');
+        return { success: false, error: new Error('Not authorized') };
+      }
+
+      // Remove group from all members' groupIds
+      const members = groupData.members || [];
+      const updatePromises = members.map((memberId: string) => 
+        updateDoc(doc(db, 'users', memberId), {
+          groupIds: arrayRemove(groupId)
+        })
+      );
+      
+      await Promise.all(updatePromises);
+
+      // Delete the group document
+      await deleteDoc(doc(db, 'groups', groupId));
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      setError('Failed to delete group. Please try again.');
+      return { success: false, error: error as Error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const performLogin = async (email: string, password: string): Promise<AuthResult> => {
     setLoading(true);
     setError(null);
@@ -200,5 +347,15 @@ export const useAuth = () => {
     }
   };
 
-  return { handleRegister, performLogin, loading, error, handleFilters, createGroup };
+  return { 
+    handleRegister, 
+    performLogin, 
+    loading, 
+    error, 
+    handleFilters, 
+    createGroup, 
+    joinGroup, 
+    leaveGroup, 
+    deleteGroup 
+  };
 };
