@@ -1,0 +1,129 @@
+import { StyleSheet, Dimensions } from 'react-native';
+export default StyleSheet.create({
+ container: {
+     position: 'relative',
+     zIndex: 1000,
+   },
+   dropdownButton: {
+     flexDirection: 'row',
+     justifyContent: 'space-between',
+     alignItems: 'center',
+     backgroundColor: '#fff',
+     borderWidth: 1,
+     borderColor: '#ddd',
+     borderRadius: 8,
+     paddingHorizontal: 12,
+     paddingVertical: 10,
+     minHeight: 44,
+   },
+   dropdownButtonText: {
+     fontSize: 16,
+     color: '#333',
+     flex: 1,
+   },
+   dropdownArrow: {
+     fontSize: 12,
+     color: '#666',
+     marginLeft: 8,
+   },
+   modalOverlay: {
+     flex: 1,
+     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+     justifyContent: 'center',
+     alignItems: 'center',
+   },
+   dropdownContainer: {
+     backgroundColor: 'white',
+     borderRadius: 12,
+     padding: 16,
+     maxHeight: Dimensions.get('window').height * 0.6,
+     width: Dimensions.get('window').width * 0.8,
+     elevation: 5,
+     shadowColor: '#000',
+     shadowOffset: { width: 0, height: 2 },
+     shadowOpacity: 0.25,
+     shadowRadius: 4,
+   },
+   dropdownTitle: {
+     fontSize: 18,
+     fontWeight: 'bold',
+     marginBottom: 16,
+     textAlign: 'center',
+     color: '#333',
+   },
+   groupsList: {
+     maxHeight: 300,
+   },
+   groupItem: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     justifyContent: 'space-between',
+     paddingVertical: 12,
+     paddingHorizontal: 8,
+     borderRadius: 8,
+     marginVertical: 2,
+   },
+   selectedGroupItem: {
+     backgroundColor: '#e3f2fd',
+   },
+   groupInfo: {
+     flex: 1,
+   },
+   groupName: {
+     fontSize: 16,
+     fontWeight: '500',
+     color: '#333',
+   },
+   memberCount: {
+     fontSize: 12,
+     color: '#666',
+     marginTop: 2,
+   },
+   checkmark: {
+     width: 20,
+     height: 20,
+     borderRadius: 10,
+     backgroundColor: '#2196f3',
+     alignItems: 'center',
+     justifyContent: 'center',
+   },
+   checkmarkText: {
+     color: 'white',
+     fontSize: 12,
+     fontWeight: 'bold',
+   },
+   loadingText: {
+     fontSize: 14,
+     color: '#666',
+     marginLeft: 8,
+   },
+   loadingContainer: {
+     padding: 16,
+     alignItems: 'center',
+   },
+   errorContainer: {
+     padding: 16,
+     alignItems: 'center',
+   },
+   errorText: {
+     color: '#f44336',
+     textAlign: 'center',
+     marginBottom: 8,
+   },
+   retryButton: {
+     backgroundColor: '#2196f3',
+     paddingHorizontal: 16,
+     paddingVertical: 8,
+     borderRadius: 4,
+   },
+   retryButtonText: {
+     color: 'white',
+     fontWeight: '500',
+   },
+   noGroupsText: {
+     textAlign: 'center',
+     color: '#666',
+     padding: 16,
+     fontStyle: 'italic',
+   },
+ });

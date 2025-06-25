@@ -221,14 +221,6 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
   selectedGroupContainer: {
-    borderWidth: 3,
-    borderColor: '#E91E63', 
-    transform: [{ scale: 1.02 }], 
-    shadowColor: '#E91E63',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
   emptyStateContainer: {
     padding: 40,

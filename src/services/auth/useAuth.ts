@@ -65,6 +65,59 @@ export const useAuth = () => {
     }
   };
 
+const fetchGroups = async (userId: string): Promise<GroupData[]> => {
+  try {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    // Query groups where the user is either the owner or a member
+    const groupsQuery = query(
+      collection(db, 'groups'),
+      where('members', 'array-contains', userId)
+    );
+
+    const groupsSnapshot = await getDocs(groupsQuery);
+    
+    if (groupsSnapshot.empty) {
+      console.log('No groups found for user:', userId);
+      return [];
+    }
+
+    // Map the documents to GroupData objects
+    const groups: GroupData[] = [];
+    
+    groupsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      
+      // Only include active groups (if isActive field exists)
+      if (data.isActive !== false) {
+        groups.push({
+          groupId: doc.id,
+          groupName: data.name || 'Unnamed Group',
+          groupPicture: data.groupPicture || '',
+          isActive: data.isActive !== false,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          ownerId: data.ownerId || data.createdBy || '',
+          groupCode: data.groupCode || '',
+          // Optional fields
+          members: data.members || [],
+          filtersId: data.filtersId || []
+        });
+      }
+    });
+
+    // Sort groups by name for consistent display
+    groups.sort((a, b) => a.groupName.localeCompare(b.groupName));
+
+    console.log(`Fetched ${groups.length} groups for user ${userId}`);
+    return groups;
+
+  } catch (error) {
+    console.error('Error fetching user groups:', error);
+    throw new Error(`Failed to fetch groups: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
   // This would go in your handleFilters function
   const handleFilters = async (filterData: FilterData): Promise<AuthResult> => {
     setLoading(true);
@@ -356,6 +409,7 @@ const leaveGroup = async (groupId: string): Promise<AuthResult> => {
     createGroup, 
     joinGroup, 
     leaveGroup, 
-    deleteGroup 
+    deleteGroup ,
+    fetchGroups
   };
 };

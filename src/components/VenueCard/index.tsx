@@ -1,9 +1,11 @@
+// VenueCard.tsx
 import React from 'react';
 import { View, Text, ImageBackground } from 'react-native';
 import { X, RotateCw, Heart } from 'lucide-react-native';
 import Button from '../Button';
 import GradientView from '@assets/Gradient/GradientView';
 import styles from './styles';
+import GroupDropdown from '../dropDownMenu';
 
 export interface Venue {
   id: string;
@@ -21,9 +23,23 @@ interface VenueCardProps {
   onLike: () => void;
   onDislike: () => void;
   onRewind: () => void;
+  // Add dropdown props
+  userId: string;
+  onGroupSelect: (groupId: string) => void;
+  selectedGroupId?: string;
+  showError?: (message: string) => void;
 }
 
-export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueCardProps) {
+export default function VenueCard({
+  venue,
+  onLike,
+  onDislike,
+  onRewind,
+  userId,
+  onGroupSelect,
+  selectedGroupId,
+  showError,
+}: VenueCardProps) {
   // Process tags
   const tags = venue.tags || 
     venue.type
@@ -39,6 +55,18 @@ export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueC
         style={styles.image} 
         resizeMode="cover"
       >
+        {/* Add GroupDropdown at the top */}
+        <View style={styles.dropdownWrapper}>
+          <GroupDropdown
+            userId={userId}
+            onGroupSelect={onGroupSelect}
+            selectedGroupId={selectedGroupId}
+            showError={showError}
+            buttonStyle={styles.dropdownButtonInCard}
+            buttonTextStyle={styles.dropdownButtonTextInCard}
+          />
+        </View>
+        
         <GradientView
           colors={['transparent', 'rgb(0, 0, 0)', 'rgb(0, 0, 0)']}
           style={styles.gradient}
@@ -54,10 +82,9 @@ export default function VenueCard({ venue, onLike, onDislike, onRewind }: VenueC
               ))}
             </View>
             <View style={styles.ratingDistanceContainer}>
-  <Text style={styles.rating}>{venue.rating.toFixed(1)} ★</Text>
-  {venue.distance && <Text style={styles.distance}>{venue.distance}</Text>}
-</View>
-
+              <Text style={styles.rating}>{venue.rating.toFixed(1)} ★</Text>
+              {venue.distance && <Text style={styles.distance}>{venue.distance}</Text>}
+            </View>
             
             <View style={styles.actionButtons}>
               <Button 
