@@ -113,4 +113,20 @@ export default StyleSheet.create({
     marginTop: 10,
     marginBottom: 20,
   },
+  dropdownWrapper: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 200,
+    zIndex: 1000,
+  },
+  dropdownButtonInCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  dropdownButtonTextInCard: {
+    color: '#000',
+    fontSize: 14,
+  },
+  
 });
