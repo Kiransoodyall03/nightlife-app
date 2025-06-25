@@ -21,6 +21,7 @@ export default function DiscoverScreen() {
   const { showSuccess, showError } = useNotification();
   const [userFilters, setUserFilters] = useState<string[]>([]);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
   
@@ -312,6 +313,8 @@ export default function DiscoverScreen() {
             onLike={() => swiperRef.current?.swipeRight()}
             onDislike={() => swiperRef.current?.swipeLeft()}
             onRewind={() => swiperRef.current?.swipeBack()}
+            userId={userData?.uid || ''}
+            onGroupSelect={() => {setSelectedGroupId}}
           />
         )}
         onSwipedRight={handleSwipedRight}
