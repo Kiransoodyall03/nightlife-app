@@ -1,11 +1,10 @@
-// VenueCard.tsx
+// VenueCard.tsx - Refactored without dropdown
 import React from 'react';
 import { View, Text, ImageBackground } from 'react-native';
 import { X, RotateCw, Heart } from 'lucide-react-native';
 import Button from '../Button';
 import GradientView from '@assets/Gradient/GradientView';
 import styles from './styles';
-import GroupDropdown from '../dropDownMenu';
 
 export interface Venue {
   id: string;
@@ -23,11 +22,8 @@ interface VenueCardProps {
   onLike: () => void;
   onDislike: () => void;
   onRewind: () => void;
-  // Add dropdown props
-  userId: string;
-  onGroupSelect: (groupId: string) => void;
-  selectedGroupId?: string;
-  showError?: (message: string) => void;
+  // Remove dropdown props - they're no longer needed here
+  selectedGroupName?: string; // Optional: if you want to display selected group name on card
 }
 
 export default function VenueCard({
@@ -35,10 +31,7 @@ export default function VenueCard({
   onLike,
   onDislike,
   onRewind,
-  userId,
-  onGroupSelect,
-  selectedGroupId,
-  showError,
+  selectedGroupName,
 }: VenueCardProps) {
   // Process tags
   const tags = venue.tags || 
@@ -55,18 +48,6 @@ export default function VenueCard({
         style={styles.image} 
         resizeMode="cover"
       >
-        {/* Add GroupDropdown at the top */}
-        <View style={styles.dropdownWrapper}>
-          <GroupDropdown
-            userId={userId}
-            onGroupSelect={onGroupSelect}
-            selectedGroupId={selectedGroupId}
-            showError={showError}
-            buttonStyle={styles.dropdownButtonInCard}
-            buttonTextStyle={styles.dropdownButtonTextInCard}
-          />
-        </View>
-        
         <GradientView
           colors={['transparent', 'rgb(0, 0, 0)', 'rgb(0, 0, 0)']}
           style={styles.gradient}

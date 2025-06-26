@@ -20,6 +20,7 @@ export default StyleSheet.create({
      fontSize: 16,
      color: '#333',
      flex: 1,
+     textAlign: 'center',
    },
    dropdownArrow: {
      fontSize: 12,
@@ -37,7 +38,7 @@ export default StyleSheet.create({
      borderRadius: 12,
      padding: 16,
      maxHeight: Dimensions.get('window').height * 0.6,
-     width: Dimensions.get('window').width * 0.8,
+     width: Dimensions.get('window').width * 0.9,
      elevation: 5,
      shadowColor: '#000',
      shadowOffset: { width: 0, height: 2 },

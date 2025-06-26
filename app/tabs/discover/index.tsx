@@ -4,6 +4,7 @@ import Swiper from 'react-native-deck-swiper';
 import VenueCard from '../../../src/components/VenueCard';
 import { Venue } from '../../../src/components/VenueCard';
 import Button from 'src/components/Button';
+import GroupDropdown from 'src/components/dropDownMenu'; // Import the dropdown
 import styles from './styles';
 import { useUser } from 'src/context/UserContext';
 import { useNotification } from 'src/components/Notification/NotificationContext';
@@ -21,12 +22,21 @@ export default function DiscoverScreen() {
   const { showSuccess, showError } = useNotification();
   const [userFilters, setUserFilters] = useState<string[]>([]);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [selectedGroupName, setSelectedGroupName] = useState<string>('Personal Preferences');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
   
   // Track existing venue IDs to prevent duplicates
   const venueIdsRef = useRef(new Set<string>());
+
+  // Handle group selection from dropdown
+  const handleGroupSelect = (selection: { groupId: string; groupName: string }) => {
+    setSelectedGroupId(selection.groupId);
+    setSelectedGroupName(selection.groupName);
+    console.log('Group selected:', selection);
+    // Here you can add logic to filter venues based on group preferences if needed
+  };
 
   // Filter fetching effect with improved comparison
   useEffect(() => {
@@ -118,7 +128,6 @@ export default function DiscoverScreen() {
       })
     }));
   }, [GOOGLE_API_KEY, calculateDistance]);
-
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -259,13 +268,13 @@ export default function DiscoverScreen() {
   }, [isRefreshing, resetAndReloadVenues]);
 
   const handleSwipedRight = (index: number) => {
-    console.log(`Liked: ${venues[index].name}`);
-    // Here you would implement your "like" logic
+    console.log(`Liked: ${venues[index].name} with group: ${selectedGroupName}`);
+    // Here you would implement your "like" logic with the selected group
   };
 
   const handleSwipedLeft = (index: number) => {
-    console.log(`Passed: ${venues[index].name}`);
-    // Here you would implement your "dislike" logic
+    console.log(`Passed: ${venues[index].name} with group: ${selectedGroupName}`);
+    // Here you would implement your "dislike" logic with the selected group
   };
 
   if (!locationData) {
@@ -303,42 +312,56 @@ export default function DiscoverScreen() {
   );
   
   return (
-    <View style={styles.cardsContainer}>
-      <Swiper
-        ref={swiperRef}
-        cards={venues}
-        renderCard={(venue) => venue && (
-          <VenueCard 
-            venue={venue}
-            onLike={() => swiperRef.current?.swipeRight()}
-            onDislike={() => swiperRef.current?.swipeLeft()}
-            onRewind={() => swiperRef.current?.swipeBack()}
-            userId={userData?.uid || ''}
-            onGroupSelect={() => {setSelectedGroupId}}
-          />
+    <View style={styles.container}>
+      {/* Dropdown at the top middle of the page */}
+      <View style={styles.dropdownContainer}>
+        <GroupDropdown
+          userId={userData?.uid || ''}
+          onGroupSelect={handleGroupSelect}
+          selectedGroupId={selectedGroupId}
+          showError={showError}
+          buttonStyle={styles.dropdownButton}
+          buttonTextStyle={styles.dropdownButtonText}
+        />
+      </View>
+
+      {/* Cards container */}
+      <View style={styles.cardsContainer}>
+        <Swiper
+          ref={swiperRef}
+          cards={venues}
+          renderCard={(venue) => venue && (
+            <VenueCard 
+              venue={venue}
+              onLike={() => swiperRef.current?.swipeRight()}
+              onDislike={() => swiperRef.current?.swipeLeft()}
+              onRewind={() => swiperRef.current?.swipeBack()}
+              selectedGroupName={selectedGroupName} // Pass the selected group name to display on card
+            />
+          )}
+          onSwipedRight={handleSwipedRight}
+          onSwipedLeft={handleSwipedLeft}
+          onSwipedAll={handleSwipedAll}
+          infinite={false}
+          backgroundColor={'transparent'}
+          stackSize={4}
+          stackScale={10}
+          stackSeparation={14}
+          animateOverlayLabelsOpacity
+          animateCardOpacity
+          swipeBackCard
+          containerStyle={styles.swiper}
+          cardIndex={0}
+          cardVerticalMargin={10}
+          cardHorizontalMargin={10}
+        />
+        {isLoadingMore && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" />
+            <Text>Loading more venues...</Text>
+          </View>
         )}
-        onSwipedRight={handleSwipedRight}
-        onSwipedLeft={handleSwipedLeft}
-        onSwipedAll={handleSwipedAll}
-        infinite={false} // Changed to false for better control over pagination
-        backgroundColor={'transparent'}
-        stackSize={4}
-        stackScale={10}
-        stackSeparation={14}
-        animateOverlayLabelsOpacity
-        animateCardOpacity
-        swipeBackCard
-        containerStyle={styles.swiper}
-        cardIndex={0}
-        cardVerticalMargin={10}
-        cardHorizontalMargin={10}
-      />
-      {isLoadingMore && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" />
-          <Text>Loading more venues...</Text>
-        </View>
-      )}
+      </View>
     </View>
   );
 }

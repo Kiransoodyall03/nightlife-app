@@ -5,8 +5,8 @@ const TopHeading = height * 0.15;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center', 
-    alignItems: 'center', 
+    // justifyContent: 'center', 
+    // alignItems: 'center', 
   },
   dashboard: {
     height: 60, 
@@ -58,6 +58,40 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center'
   },
+  dropdownContainer: {
+    position: 'absolute',
+    top: 0, // Adjust based on your status bar height
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingVertical: -2,
+    zIndex: 1000, // Ensure it's above the cards
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5, // For Android shadow
+  },
+    dropdownButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    minHeight: 48,
+  },
+    dropdownButtonText: {
+    fontSize: 16,
+    color: '#495057',
+    fontWeight: '500',
+  },
+
 });
 
 export default styles;

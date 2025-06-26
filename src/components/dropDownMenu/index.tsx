@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ interface GroupData {
 
 interface GroupDropdownProps {
   userId: string;
-  onGroupSelect: (groupId: string) => void;
+  onGroupSelect: (selection: { groupId: string; groupName: string; filtersId: string[] }) => void;
   selectedGroupId?: string;
   showError?: (message: string) => void;
   buttonStyle?: ViewStyle;
@@ -105,8 +105,7 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
 
       const groupsData = await Promise.all(groupPromises);
       const validGroups = groupsData.filter(group => group !== null) as GroupData[];
-      
-      console.log('Fetched groups:', validGroups); // Debug log
+
       setGroups(validGroups);
       setError(null);
       
@@ -127,7 +126,10 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
       setLoading(false);
     }
   };
-
+ const openDropdown = useCallback(async () => {
+    setIsDropdownOpen(true);
+    await fetchUserGroups(true);
+  }, [fetchUserGroups]);
   // Load groups on component mount and when userId changes
   useEffect(() => {
     if (userId) {
@@ -140,6 +142,8 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
     if (selectedGroupId && groups.length > 0) {
       const group = groups.find(g => g.groupId === selectedGroupId);
       setSelectedGroup(group || null);
+    } else if (!selectedGroupId) {
+      setSelectedGroup(null);
     }
   }, [selectedGroupId, groups]);
 
@@ -150,13 +154,21 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
   const handleGroupSelect = (group: GroupData) => {
     setSelectedGroup(group);
     setIsDropdownOpen(false);
-    onGroupSelect(group.groupId);
+    onGroupSelect({
+      groupId: group.groupId,
+      groupName: group.groupName,
+      filtersId: group.filtersId,
+    });
   };
 
   const handlePersonalSelect = () => {
     setSelectedGroup(null);
     setIsDropdownOpen(false);
-    onGroupSelect(''); // Empty string for personal/individual mode
+    onGroupSelect({
+      groupId: '',
+      groupName: 'Personal Filters',
+      filtersId: [],
+    });
   };
 
   const renderGroupItem = ({ item }: { item: GroupData }) => (
@@ -194,7 +206,7 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
     <View style={styles.container}>
       <TouchableOpacity
         style={[styles.dropdownButton, buttonStyle]}
-        onPress={() => setIsDropdownOpen(true)}
+        onPress={openDropdown}
       >
         <Text style={[styles.dropdownButtonText, buttonTextStyle]}>
           {selectedGroup ? selectedGroup.groupName : 'Personal Preferences'}
