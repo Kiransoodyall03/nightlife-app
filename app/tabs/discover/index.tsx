@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import VenueCard from '../../../src/components/VenueCard';
 import { Venue } from '../../../src/components/VenueCard';
 import Button from 'src/components/Button';
-import GroupDropdown from 'src/components/dropDownMenu'; // Import the dropdown
+import GroupDropdown from 'src/components/dropDownMenu';
 import styles from './styles';
 import { useUser } from 'src/context/UserContext';
 import { useNotification } from 'src/components/Notification/NotificationContext';
@@ -24,19 +24,29 @@ export default function DiscoverScreen() {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [selectedGroupName, setSelectedGroupName] = useState<string>('Personal Preferences');
+  const [selectedGroupFilters, setSelectedGroupFilters] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
   
   // Track existing venue IDs to prevent duplicates
   const venueIdsRef = useRef(new Set<string>());
 
+  const activeFilters = useMemo(() => {
+    return selectedGroupId ? selectedGroupFilters : userFilters;
+  }, [selectedGroupId, selectedGroupFilters, userFilters]);
   // Handle group selection from dropdown
-  const handleGroupSelect = (selection: { groupId: string; groupName: string }) => {
+  const handleGroupSelect = (selection: { groupId: string; groupName: string; groupFilters: string[]}) => {
     setSelectedGroupId(selection.groupId);
     setSelectedGroupName(selection.groupName);
+    setSelectedGroupFilters(selection.groupFilters);
     console.log('Group selected:', selection);
-    // Here you can add logic to filter venues based on group preferences if needed
   };
+
+  useEffect(() => {
+    if (initialLoadDone) {
+      resetAndReloadVenues();
+    }
+  }, [activeFilters]);
 
   // Filter fetching effect with improved comparison
   useEffect(() => {
@@ -131,7 +141,7 @@ export default function DiscoverScreen() {
 
   const loadInitialData = useCallback(async () => {
     try {
-      if (!userFilters.length) {
+      if (!activeFilters.length) {
         showError('No filters available. Please set preferences first.');
         setIsLoading(false);
         return;
@@ -143,13 +153,13 @@ export default function DiscoverScreen() {
       }
       
       setIsLoading(true);
-      console.log("Loading venues with filters:", userFilters);
+      console.log("Loading venues with filters:", activeFilters);
       
       // Clear existing venues and tracking
       setVenues([]);
       venueIdsRef.current.clear();
       
-      const response = await fetchNearbyPlaces({ types: userFilters });
+      const response = await fetchNearbyPlaces({ types: activeFilters });
       
       if (response.results.length === 0) {
         showError('No venues found matching your filters. Try adjusting your preferences.');
@@ -173,7 +183,7 @@ export default function DiscoverScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchNearbyPlaces, userFilters, showSuccess, showError, locationData, transformPlacesToVenues]);
+  }, [fetchNearbyPlaces, activeFilters, showSuccess, showError, locationData, transformPlacesToVenues]);
 
   // Only trigger the initial load once (or when locationData changes)
   useEffect(() => {

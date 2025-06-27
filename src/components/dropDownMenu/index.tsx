@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from 'src/services/firebase/config';
+import styles from './styles';
 
 interface GroupData {
   groupId: string;
@@ -28,7 +29,7 @@ interface GroupData {
 
 interface GroupDropdownProps {
   userId: string;
-  onGroupSelect: (selection: { groupId: string; groupName: string; filtersId: string[] }) => void;
+  onGroupSelect: (selection: { groupId: string; groupName: string; groupFilters: string[] }) => void;
   selectedGroupId?: string;
   showError?: (message: string) => void;
   buttonStyle?: ViewStyle;
@@ -49,7 +50,7 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
   const [selectedGroup, setSelectedGroup] = useState<GroupData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch groups function using your existing logic
+  // Fetch groups function with enhanced filter collection
   const fetchUserGroups = async (showLoader: boolean = true) => {
     if (!userId) {
       setLoading(false);
@@ -88,6 +89,18 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
         
         if (groupDoc.exists()) {
           const groupData = groupDoc.data();
+          
+          // Enhanced filter collection with fallbacks and validation
+          let filtersId: string[] = [];
+          if (groupData.filtersId && Array.isArray(groupData.filtersId)) {
+            filtersId = groupData.filtersId.filter((id: any) => typeof id === 'string' && id.trim() !== '');
+          } else if (groupData.filters && Array.isArray(groupData.filters)) {
+            // Fallback to 'filters' field if 'filtersId' doesn't exist
+            filtersId = groupData.filters.filter((id: any) => typeof id === 'string' && id.trim() !== '');
+          }
+
+          console.log(`Group ${groupDoc.id} filters:`, filtersId); // Debug log
+
           return {
             groupId: groupDoc.id,
             groupName: groupData.groupName || 'Unnamed Group',
@@ -95,7 +108,7 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
             isActive: groupData.isActive || false,
             createdAt: groupData.createdAt?.toDate() || new Date(),
             members: groupData.members || [],
-            filtersId: groupData.filtersId || [],
+            filtersId: filtersId,
             ownerId: groupData.ownerId || groupData.createdBy,
             groupCode: groupData.groupCode // Handle both field names
           } as GroupData;
@@ -105,6 +118,13 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
 
       const groupsData = await Promise.all(groupPromises);
       const validGroups = groupsData.filter(group => group !== null) as GroupData[];
+
+      console.log('Loaded groups with filters:', validGroups.map(g => ({ 
+        id: g.groupId, 
+        name: g.groupName, 
+        filtersCount: g.filtersId.length,
+        filters: g.filtersId 
+      }))); // Debug log
 
       setGroups(validGroups);
       setError(null);
@@ -126,10 +146,12 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
       setLoading(false);
     }
   };
- const openDropdown = useCallback(async () => {
+
+  const openDropdown = useCallback(async () => {
     setIsDropdownOpen(true);
     await fetchUserGroups(true);
   }, [fetchUserGroups]);
+
   // Load groups on component mount and when userId changes
   useEffect(() => {
     if (userId) {
@@ -154,20 +176,26 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
   const handleGroupSelect = (group: GroupData) => {
     setSelectedGroup(group);
     setIsDropdownOpen(false);
+    
+    console.log('Selected group filters:', group.filtersId); // Debug log
+    
     onGroupSelect({
       groupId: group.groupId,
       groupName: group.groupName,
-      filtersId: group.filtersId,
+      groupFilters: group.filtersId, // Ensure filters are passed
     });
   };
 
   const handlePersonalSelect = () => {
     setSelectedGroup(null);
     setIsDropdownOpen(false);
+    
+    console.log('Selected personal filters: []'); // Debug log
+    
     onGroupSelect({
       groupId: '',
       groupName: 'Personal Filters',
-      filtersId: [],
+      groupFilters: [], // Empty array for personal filters
     });
   };
 
@@ -183,6 +211,10 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
         <Text style={styles.groupName}>{item.groupName}</Text>
         <Text style={styles.memberCount}>
           {item.members.length} member{item.members.length !== 1 ? 's' : ''}
+        </Text>
+        {/* Show filter count for debugging/info */}
+        <Text style={styles.filterCount}>
+          {item.filtersId.length} filter{item.filtersId.length !== 1 ? 's' : ''}
         </Text>
       </View>
       {selectedGroup?.groupId === item.groupId && (
@@ -239,6 +271,7 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
               <View style={styles.groupInfo}>
                 <Text style={styles.groupName}>Personal Preferences</Text>
                 <Text style={styles.memberCount}>Just you</Text>
+                <Text style={styles.filterCount}>Your personal filters</Text>
               </View>
               {!selectedGroup && (
                 <View style={styles.checkmark}>
@@ -278,134 +311,4 @@ const GroupDropdown: React.FC<GroupDropdownProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'relative',
-    zIndex: 1000,
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
-  },
-  dropdownButtonText: {
-    fontSize: 16,
-    color: '#333',
-    flex: 1,
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdownContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    maxHeight: Dimensions.get('window').height * 0.6,
-    width: Dimensions.get('window').width * 0.8,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  dropdownTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-    color: '#333',
-  },
-  groupsList: {
-    maxHeight: 300,
-  },
-  groupItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginVertical: 2,
-  },
-  selectedGroupItem: {
-    backgroundColor: '#e3f2fd',
-  },
-  groupInfo: {
-    flex: 1,
-  },
-  groupName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-  },
-  memberCount: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  checkmark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#2196f3',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkmarkText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
-  },
-  loadingContainer: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  errorContainer: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  errorText: {
-    color: '#f44336',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  retryButton: {
-    backgroundColor: '#2196f3',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  noGroupsText: {
-    textAlign: 'center',
-    color: '#666',
-    padding: 16,
-    fontStyle: 'italic',
-  },
-});
-
 export default GroupDropdown;

@@ -13,9 +13,12 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useUser } from '../../../src/context/UserContext';
+import { UserData } from 'src/services/auth/types';
 import { useAuth } from '../../../src/services/auth/useAuth';
 import { modalStyles } from './styles'; // Import the separate styles file
 import { ref, uploadBytes, getDownloadURL, getStorage } from 'firebase/storage';
+import { db } from 'src/services/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -45,7 +48,9 @@ const GroupCreateModal: React.FC<GroupCreateModalProps> = ({
   const [showInterests, setShowInterests] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const { pickImage } = useUser();
-  const { createGroup, loading, error } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { createGroup, loading } = useAuth();
+  const {user, userData} = useUser();
   const storage = getStorage(getApp());
 
   // Available interests
@@ -87,6 +92,23 @@ const GroupCreateModal: React.FC<GroupCreateModalProps> = ({
       setIsUploading(false);
     }
   }, [visible]);
+    useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (!user) return;
+        
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data() as UserData;
+        }
+      } catch (err) {
+        setError('Failed to load profile data');
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
 
   const handleUploadImage = async () => {
     try {
@@ -147,6 +169,7 @@ const GroupCreateModal: React.FC<GroupCreateModalProps> = ({
   };
 
   const handleCreateGroup = async () => {
+
     if (!groupName.trim()) {
       Alert.alert('Missing Information', 'Please enter a group name');
       return;
@@ -171,11 +194,13 @@ const GroupCreateModal: React.FC<GroupCreateModalProps> = ({
       const result = await createGroup({
         groupId: '',
         groupName: groupName.trim(),
-        filters: selectedInterests,
+        filtersId: selectedInterests,
         groupPicture: groupPictureUrl ?? '',
         members: [],
         createdAt: new Date(),
-        isActive: false
+        isActive: false,
+        ownerId: userData?.uid || '',
+        groupCode: ""
       });
       
       if (result.success) {

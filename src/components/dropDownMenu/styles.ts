@@ -67,6 +67,12 @@ export default StyleSheet.create({
    selectedGroupItem: {
      backgroundColor: '#e3f2fd',
    },
+    filterCount: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 1,
+    fontStyle: 'italic',
+  },
    groupInfo: {
      flex: 1,
    },
