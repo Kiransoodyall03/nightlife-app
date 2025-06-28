@@ -7,6 +7,7 @@ import Button from 'src/components/Button';
 import GroupDropdown from 'src/components/dropDownMenu';
 import styles from './styles';
 import { useUser } from 'src/context/UserContext';
+import { useAuth } from 'src/services/auth/useAuth';
 import { useNotification } from 'src/components/Notification/NotificationContext';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from 'src/services/firebase/config';
@@ -14,6 +15,7 @@ import { GooglePlace } from 'src/services/auth/types';
 
 export default function DiscoverScreen() {
   const { fetchNearbyPlaces, userData, locationData } = useUser();
+  const { createLike } = useAuth(); // Add this line
   const [venues, setVenues] = useState<Venue[]>([]);
   const swiperRef = useRef<Swiper<Venue> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +36,7 @@ export default function DiscoverScreen() {
   const activeFilters = useMemo(() => {
     return selectedGroupId ? selectedGroupFilters : userFilters;
   }, [selectedGroupId, selectedGroupFilters, userFilters]);
+
   // Handle group selection from dropdown
   const handleGroupSelect = (selection: { groupId: string; groupName: string; groupFilters: string[]}) => {
     setSelectedGroupId(selection.groupId);
@@ -277,14 +280,41 @@ export default function DiscoverScreen() {
     setIsRefreshing(false);
   }, [isRefreshing, resetAndReloadVenues]);
 
-  const handleSwipedRight = (index: number) => {
-    console.log(`Liked: ${venues[index].name} with group: ${selectedGroupName}`);
-    // Here you would implement your "like" logic with the selected group
+  // Updated handleSwipedRight with createLike integration
+  const handleSwipedRight = async (index: number) => {
+    const venue = venues[index];
+    console.log(`Liked: ${venue.name} with group: ${selectedGroupName}`);
+    
+    // Only create like if a group is selected (not Personal Preferences)
+    if (selectedGroupId) {
+      try {
+        const result = await createLike({
+          likeId: '', // Will be auto-generated
+          groupId: selectedGroupId,
+          userId: '', // Will be overridden with authenticated user
+          locationId: venue.id // This is the Google Places place_id
+        });
+        
+        if (result.success) {
+          showSuccess(`${venue.name} added to ${selectedGroupName}!`);
+        } else {
+          // Error will be handled by the error state in useAuth
+          console.error('Failed to create like:', result.error);
+        }
+      } catch (error) {
+        console.error('Error creating like:', error);
+        // Don't show error here since createLike handles it
+      }
+    } else {
+      // For Personal Preferences, just log (or implement personal preference storage)
+      console.log(`Liked ${venue.name} for personal preferences`);
+      showSuccess(`${venue.name} noted as liked!`);
+    }
   };
 
   const handleSwipedLeft = (index: number) => {
     console.log(`Passed: ${venues[index].name} with group: ${selectedGroupName}`);
-    // Here you would implement your "dislike" logic with the selected group
+    // Here you could implement dislike logic if needed
   };
 
   if (!locationData) {

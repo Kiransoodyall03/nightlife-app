@@ -12,6 +12,7 @@ export interface FirebaseAuthError extends Error {
     error?: Error;
     filterId?: string;
     groupId?: string;
+    likeId?: string;
   };
 
   export interface UserData {
@@ -28,6 +29,13 @@ export interface FirebaseAuthError extends Error {
     username: string;
     email: string;
     password: string;
+  }
+
+  export interface LikeData {
+    likeId: string;
+    groupId: string;
+    userId: string;
+    locationId: string;
   }
 
   export interface FilterData {

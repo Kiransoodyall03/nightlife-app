@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { addDoc, collection, doc, setDoc, updateDoc, GeoPoint, runTransaction, 
   query, where, getDoc, getDocs, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
-import { AuthResult, AuthUser, FilterData, GroupData, UserData } from './types';
+import { AuthResult, AuthUser, FilterData, GroupData, UserData, LikeData } from './types';
 import { Group } from 'lucide-react-native';
 
 export const useAuth = () => {
@@ -239,6 +239,63 @@ const fetchGroups = async (userId: string): Promise<GroupData[]> => {
     }
   };
 
+const createLike = async (likeData: LikeData): Promise<AuthResult> => {
+  setError(null);
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
+
+    // 1. Validate that the group exists and user has permission
+    const groupRef = doc(db, 'groups', likeData.groupId);
+    const groupSnap = await getDoc(groupRef);
+    
+    if (!groupSnap.exists()) {
+      throw new Error('Group not found');
+    }
+    
+    const groupData = groupSnap.data();
+    // Check if user is member of the group (adjust field name as needed)
+    if (!groupData.members?.includes(user.uid)) {
+      throw new Error('User not authorized to like in this group');
+    }
+
+    // 2. Check for duplicate likes (same user, group, and location)
+    const likesQuery = query(
+      collection(db, 'likes'),
+      where('userId', '==', user.uid),
+      where('groupId', '==', likeData.groupId),
+      where('locationId', '==', likeData.locationId)
+    );
+    
+    const existingLikes = await getDocs(likesQuery);
+    if (!existingLikes.empty) {
+      throw new Error('You have already liked this location in this group');
+    }
+
+    // 3. Validate locationId format (basic Google Places place_id validation)
+    if (!likeData.locationId || !likeData.locationId.startsWith('ChIJ')) {
+      throw new Error('Invalid location ID format');
+    }
+
+    // Create like document
+    const likeRef = doc(collection(db, 'likes'));
+    await setDoc(likeRef, {
+      likeId: likeRef.id,
+      groupId: likeData.groupId,
+      userId: user.uid, // Always use authenticated user's ID for security
+      locationId: likeData.locationId,
+      createdAt: new Date().toISOString()
+    });
+
+    return { success: true, likeId: likeRef.id };
+  } catch (error) {
+    console.error('Error creating like:', error);
+    setError(error instanceof Error ? error.message : 'Failed to create like. Please try again.');
+    return { success: false, error: error as Error };
+  }
+};
+
   const joinGroup = async (groupCode: string): Promise<AuthResult> => {
     setLoading(true);
     setError(null);
@@ -410,6 +467,7 @@ const leaveGroup = async (groupId: string): Promise<AuthResult> => {
     joinGroup, 
     leaveGroup, 
     deleteGroup ,
-    fetchGroups
+    fetchGroups,
+    createLike
   };
 };
