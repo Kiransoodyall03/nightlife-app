@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Image, ScrollView, TouchableOpacity, Linking, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  Image, 
+  ScrollView, 
+  TouchableOpacity, 
+  Linking, 
+  ActivityIndicator, 
+  Modal, 
+  TextInput, 
+  Alert 
+} from 'react-native';
 import { styles } from './styles';
 import { useNotification } from 'src/components/Notification/NotificationContext';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import GroupCreateModal from '../../../src/components/createGroupModal/GroupCreateModal';
-import { GroupData, LocationData } from 'src/services/auth/types';
+import { GroupData, LocationData, MatchData } from 'src/services/auth/types';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../src/services/firebase/config';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { useUser } from 'src/context/UserContext';
 import { useAuth } from 'src/services/auth/useAuth';
 import GroupCodeModal from 'src/components/InviteModal';
@@ -30,10 +42,11 @@ interface Location {
   groupId: string;
 }
 
-
 const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const { showSuccess, showError } = useNotification();
-  const { createGroup, joinGroup, leaveGroup, deleteGroup, error } = useAuth();
+  const { createGroup, joinGroup, leaveGroup, deleteGroup, error, fetchUserMatches } = useAuth();
+  const { user, userData } = useUser();
+
   // State management
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isGroupCodeModalVisible, setIsGroupCodeModalVisible] = useState(false);
@@ -46,59 +59,115 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [joiningGroup, setJoiningGroup] = useState<boolean>(false);
-  const {user, userData} = useUser();
+  const [matchLocations, setMatchLocations] = useState<Location[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState<boolean>(false);
 
-  // Sample locations data (keeping existing structure)
-  const locations: Location[] = [
-    {
-      id: '1',
-      name: "Jo'Anna MeltBar",
-      rating: 4.7,
-      distance: 5,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' }
-      ],
+const convertMatchesToLocations = (matches: MatchData[]): Location[] => {
+  console.log('🔄 Converting matches to locations...');
+  console.log('🔄 Input matches:', matches);
+  
+  if (!matches || !Array.isArray(matches)) {
+    console.log('❌ Invalid matches data:', matches);
+    return [];
+  }
+  
+  const locations = matches.map((match, index) => {
+    console.log(`🔄 Processing match ${index}:`, match);
+    
+    const location = {
+      id: match.matchId || `match-${index}`,
+      name: match.locationName || 'Unknown Location',
+      rating: match.locationRating || 0,
+      distance: typeof match.locationDistance === 'string' 
+        ? parseFloat(match.locationDistance) || 0 
+        : match.locationDistance || 0,
+      image: match.locationImage || 'https://via.placeholder.com/100',
+      matchedUsers: match.matchedUsers || [],
       partnerType: 'Uber',
-      groupId: 'g1'
-    },
-    {
-      id: '2',
-      name: "Craft Burger Co.",
-      rating: 4.5,
-      distance: 3,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u1', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u2', profileImage: 'https://via.placeholder.com/50/0000FF' },
-        { id: 'u3', profileImage: 'https://via.placeholder.com/50/00FF00' }
-      ],
-      partnerType: 'Uber',
-      groupId: 'g1'
-    },
-    {
-      id: '3',
-      name: "Starbeans Coffee",
-      rating: 4.3,
-      distance: 2,
-      image: 'https://via.placeholder.com/100',
-      matchedUsers: [
-        { id: 'u4', profileImage: 'https://via.placeholder.com/50/FF0000' },
-        { id: 'u5', profileImage: 'https://via.placeholder.com/50/0000FF' }
-      ],
-      partnerType: 'Uber',
-      groupId: 'g2'
-    },
-  ];
+      groupId: match.groupId || '',
+      extraUserCount: Math.max(0, (match.matchedUsersCount || 0) - 3)
+    };
+    
+    console.log(`✅ Converted location ${index}:`, location);
+    return location;
+  });
+  
+  console.log('🔄 Final converted locations:', locations);
+  return locations;
+};
+const fetchMatchLocations = async (showLoader: boolean = true) => {
+  const currentUserId = user?.uid || userData?.uid;
+  console.log('🔍 fetchMatchLocations START');
+  console.log('🔍 user?.uid:', user?.uid);
+  console.log('🔍 userData?.uid:', userData?.uid);
+  console.log('🔍 final currentUserId:', currentUserId);
+  
+  if (!currentUserId) {
+    console.log('❌ EARLY RETURN: No current user ID found');
+    setLoadingMatches(false);
+    return;
+  }
 
-  // Fetch user's groups on component mount
-  useEffect(() => {
-    fetchUserGroups();
-  }, [userData?.uid]); // Added dependency to refetch when user changes
+  try {
+    if (showLoader) {
+      setLoadingMatches(true);
+    }
 
+    console.log('📡 About to call fetchUserMatches with userId:', currentUserId);
+    
+    // Check if fetchUserMatches function exists
+    if (!fetchUserMatches) {
+      console.error('❌ fetchUserMatches function is undefined!');
+      throw new Error('fetchUserMatches function not available');
+    }
+    
+    console.log('📡 fetchUserMatches function exists, calling now...');
+    const userMatches = await fetchUserMatches(currentUserId);
+    
+    console.log('📊 fetchUserMatches COMPLETE');
+    console.log('📊 Type of userMatches:', typeof userMatches);
+    console.log('📊 Is array:', Array.isArray(userMatches));
+    console.log('📊 Raw userMatches:', userMatches);
+    console.log('📊 userMatches length:', userMatches?.length || 'undefined length');
+    
+    // Check if userMatches is null/undefined
+    if (!userMatches) {
+      console.log('⚠️ userMatches is null/undefined');
+      setMatchLocations([]);
+      return;
+    }
+    
+    // Check if userMatches is not an array
+    if (!Array.isArray(userMatches)) {
+      console.log('⚠️ userMatches is not an array:', userMatches);
+      setMatchLocations([]);
+      return;
+    }
+    
+    console.log('🔄 Converting matches to locations...');
+    const locations = convertMatchesToLocations(userMatches);
+    console.log('🗺️ Converted locations result:', locations);
+    console.log('🗺️ Locations length:', locations?.length || 0);
+    
+    console.log('💾 Setting matchLocations state...');
+    setMatchLocations(locations);
+    console.log('✅ fetchMatchLocations COMPLETE');
+    
+  } catch (error) {
+    console.error('💥 ERROR in fetchMatchLocations:');
+    console.error('💥 Full error object:', error);
+    
+    showError('Failed to load match locations');
+    setMatchLocations([]);
+  } finally {
+    console.log('🏁 fetchMatchLocations finally block');
+    setLoadingMatches(false);
+  }
+};
+  // Fetch user's groups
   const fetchUserGroups = async (showLoader: boolean = true) => {
-    if (!userData?.uid && !user?.uid) {
+    const currentUserId = user?.uid || userData?.uid;
+    if (!currentUserId) {
       setLoading(false);
       return;
     }
@@ -110,8 +179,7 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         setRefreshing(true);
       }
 
-      // Get user document to find their group IDs
-      const userDocRef = doc(db, 'users', user?.uid || userData?.uid || "");
+      const userDocRef = doc(db, 'users', currentUserId);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
@@ -123,14 +191,11 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       const userDocData = userDoc.data();
       const groupIds = userDocData.groupIds || [];
 
-      console.log('User groupIds:', groupIds); // Debug log
-
       if (groupIds.length === 0) {
         setUserGroups([]);
         return;
       }
 
-      // Fetch all group documents for the user's groups
       const groupPromises = groupIds.map(async (groupId: string) => {
         const groupDocRef = doc(db, 'groups', groupId);
         const groupDoc = await getDoc(groupDocRef);
@@ -146,7 +211,7 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
             members: groupData.members || [],
             filters: groupData.filtersId || [],
             ownerId: groupData.ownerId || groupData.createdBy,
-            groupCode: groupData.groupCode// Handle both field names
+            groupCode: groupData.groupCode
           } as GroupData;
         }
         return null;
@@ -155,10 +220,8 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       const groupsData = await Promise.all(groupPromises);
       const validGroups = groupsData.filter(group => group !== null) as GroupData[];
       
-      console.log('Fetched groups:', validGroups); // Debug log
       setUserGroups(validGroups);
       
-      // Update selected group if it's currently selected
       if (selectedGroupId) {
         const updatedSelectedGroup = validGroups.find(group => group.groupId === selectedGroupId);
         setSelectedGroup(updatedSelectedGroup || null);
@@ -173,11 +236,32 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     }
   };
 
-  // Filter locations based on selected group
-  const filteredLocations = selectedGroupId 
-    ? locations.filter(location => location.groupId === selectedGroupId)
-    : locations;
+  // Initialize data on component mount
+  useEffect(() => {
+    fetchUserGroups();
+    fetchMatchLocations();
+  }, [userData?.uid, user?.uid]);
 
+  // Filter locations based on selected group
+  const currentUserId = user?.uid || userData?.uid || "";
+  const filteredLocations = selectedGroupId 
+    ? (() => {
+        const filtered = matchLocations.filter(location => location.groupId === selectedGroupId);
+        console.log('🔍 Filtered by selected group:', filtered);
+        return filtered;
+      })()
+    : (() => {
+        const filtered = matchLocations.filter(location => {
+          const belongsToUserGroup = userGroups.some(group => group.groupId === location.groupId);
+          console.log(`🔍 Location ${location.id} belongs to user group:`, belongsToUserGroup);
+          return belongsToUserGroup;
+        });
+        console.log('🔍 Filtered by user groups:', filtered);
+        return filtered;
+      })();
+
+console.log('🎯 Final filtered locations:', filteredLocations);
+  // Event handlers
   const openUberApp = () => {
     Linking.openURL('uber://').catch(() => Linking.openURL('https://www.uber.com/'));
   };
@@ -216,9 +300,8 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     showSuccess('Group created successfully!');
     setIsModalVisible(false);
     
-    // Add a small delay to ensure Firestore has been updated
     setTimeout(async () => {
-      await fetchUserGroups(false); // Don't show loading spinner for refresh
+      await fetchUserGroups(false);
     }, 1000);
   };
 
@@ -237,9 +320,9 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         showSuccess('Successfully joined the group!');
         handleJoinModalClose();
         
-        // Refresh groups
         setTimeout(async () => {
           await fetchUserGroups(false);
+          await fetchMatchLocations(false);
         }, 1000);
       } else {
         showError(error || 'Failed to join group');
@@ -251,79 +334,82 @@ const GroupScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     }
   };
 
- // ... existing code ...
-
-const handleSendInvite = () => {
-  if (selectedGroup) {
-    setIsGroupCodeModalVisible(true);
+  const handleSendInvite = () => {
+    if (selectedGroup) {
+      setIsGroupCodeModalVisible(true);
     }
   };
-const handleLeaveGroup = () => {
-  if (selectedGroup){
-    setIsLeaveGroupModalVisible(true);
-  }
-};
-const handleCloseGroupCodeModal = () => {
-  setIsGroupCodeModalVisible(false);
-};
-const handleCloseLeaveGroupModal = () => {
-  setIsLeaveGroupModalVisible(false);
-};
 
-const handleDeleteGroup = () => {
-  // Capture current selectedGroup to avoid staleness
-  const groupToDelete = selectedGroup;
-  if (!groupToDelete) return;
+  const handleLeaveGroup = () => {
+    if (selectedGroup) {
+      setIsLeaveGroupModalVisible(true);
+    }
+  };
 
-  const currentUserId = user?.uid || userData?.uid || "";
-  const isOwner = groupToDelete.ownerId === currentUserId;
+  const handleCloseGroupCodeModal = () => {
+    setIsGroupCodeModalVisible(false);
+  };
 
-  if (!isOwner) {
-    showError('Only the group owner can delete the group');
-    return;
-  }
+  const handleCloseLeaveGroupModal = () => {
+    setIsLeaveGroupModalVisible(false);
+  };
 
-  // Wrap in setTimeout
-  setTimeout(() => {
-    Alert.alert(
-      'Delete Group',
-      `Are you sure you want to delete "${groupToDelete.groupName}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await deleteGroup(groupToDelete.groupId);
-              if (result.success) {
-                showSuccess('Group deleted successfully');
-                setSelectedGroupId(null);
-                setSelectedGroup(null);
-                setTimeout(async () => await fetchUserGroups(false), 1000);
-              } else {
-                showError(error || 'Failed to delete group');
+  const handleDeleteGroup = () => {
+    const groupToDelete = selectedGroup;
+    if (!groupToDelete) return;
+
+    const isOwner = groupToDelete.ownerId === currentUserId;
+
+    if (!isOwner) {
+      showError('Only the group owner can delete the group');
+      return;
+    }
+
+    setTimeout(() => {
+      Alert.alert(
+        'Delete Group',
+        `Are you sure you want to delete "${groupToDelete.groupName}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const result = await deleteGroup(groupToDelete.groupId);
+                if (result.success) {
+                  showSuccess('Group deleted successfully');
+                  setSelectedGroupId(null);
+                  setSelectedGroup(null);
+                  setTimeout(async () => {
+                    await fetchUserGroups(false);
+                    await fetchMatchLocations(false);
+                  }, 1000);
+                } else {
+                  showError(error || 'Failed to delete group');
+                }
+              } catch (err) {
+                showError('Failed to delete group. Please try again.');
               }
-            } catch (err) {
-              showError('Failed to delete group. Please try again.');
             }
           }
-        }
-      ]
-    );
-  }, 0);
-};
-
+        ]
+      );
+    }, 0);
+  };
 
   const onRefresh = async () => {
-    await fetchUserGroups(false);
+    await Promise.all([
+      fetchUserGroups(false),
+      fetchMatchLocations(false)
+    ]);
   };
 
   const isGroupOwner = (group: GroupData) => {
-    const currentUserId = user?.uid || userData?.uid || "";
     return group.ownerId === currentUserId;
   };
 
+  // Components
   const GroupsScroll = () => (
     <View>
       <View style={styles.matchedLocationsContainer}>
@@ -381,7 +467,7 @@ const handleDeleteGroup = () => {
             <Text style={styles.emptyGroupsText}>
               You haven't joined any groups yet
             </Text>
-            <Text style={styles.emptyGroupsSubtext}>
+            <Text style={styles.emptyGroupsText}>
               Create your first group to get started!
             </Text>
           </View>
@@ -391,7 +477,6 @@ const handleDeleteGroup = () => {
       {/* Group Action Buttons */}
       <View style={styles.groupActionButtonsContainer}>
         {selectedGroup ? (
-          // Show group management buttons when a group is selected
           <View style={styles.groupActionButtonsRow}>
             <TouchableOpacity 
               style={[styles.groupActionButton, styles.sendInviteButton]}
@@ -417,7 +502,6 @@ const handleDeleteGroup = () => {
             )}
           </View>
         ) : (
-          // Show create/join buttons when no group is selected
           <View style={styles.createJoinButtonContainer}>
             <TouchableOpacity 
               style={styles.createGroupButton}
@@ -441,8 +525,11 @@ const handleDeleteGroup = () => {
   const MatchedUsersIcons = ({ users, extraCount }: { users: MatchedUser[], extraCount?: number }) => (
     <View style={styles.matchedUsersContainer}>
       {users.map((user, index) => (
-        <Image key={user.id} source={{ uri: user.profileImage }}
-          style={[styles.userProfileImage, { zIndex: users.length - index }]} />
+        <Image 
+          key={user.id} 
+          source={{ uri: user.profileImage }}
+          style={[styles.userProfileImage, { zIndex: users.length - index }]} 
+        />
       ))}
       {extraCount && (
         <View style={styles.extraCountContainer}>
@@ -461,8 +548,10 @@ const handleDeleteGroup = () => {
         
         <View style={styles.metaContainer}>
           <View style={styles.ratingContainer}>
-            <Image source={require('../../../assets/icons/star-icon.png')} 
-              style={styles.starIcon} />
+            <Image 
+              source={require('../../../assets/icons/star-icon.png')} 
+              style={styles.starIcon} 
+            />
             <Text style={styles.ratingText}>{item.rating}</Text>
           </View>
           <Text style={styles.distanceText}>{item.distance}km away</Text>
@@ -478,6 +567,35 @@ const handleDeleteGroup = () => {
     </View>
   );
 
+  const EmptyStateComponent = () => {
+    if (loading || loadingMatches) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4A90E2" />
+          <Text style={styles.loadingText}>Loading matches...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyStateContainer}>
+        <Text style={styles.emptyStateText}>
+          {selectedGroupId 
+            ? "No matches available for the selected group" 
+            : userGroups.length > 0 
+              ? "No matches found across your groups"
+              : "Join a group to see matches"
+          }
+        </Text>
+        {userGroups.length === 0 && (
+          <Text style={styles.emptyStateText}>
+            Create or join a group to start finding matches!
+          </Text>
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -488,16 +606,7 @@ const handleDeleteGroup = () => {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        ListEmptyComponent={
-          <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>
-              {selectedGroupId 
-                ? "No locations available for the selected group" 
-                : "No locations available"
-              }
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={<EmptyStateComponent />}
       />
       
       {/* Create Group Modal */}
@@ -559,11 +668,15 @@ const handleDeleteGroup = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Group Code Modal */}
       <GroupCodeModal
         isVisible={isGroupCodeModalVisible}
         onClose={handleCloseGroupCodeModal}
         selectedGroup={selectedGroup}
       />
+
+      {/* Leave Group Modal */}
       <LeaveGroupModal
         isVisible={isLeaveGroupModalVisible}
         onClose={() => setIsLeaveGroupModalVisible(false)}
@@ -571,7 +684,8 @@ const handleDeleteGroup = () => {
         onLeaveSuccess={() => {
           setSelectedGroupId(null);
           setSelectedGroup(null);
-          fetchUserGroups(false); // Refresh groups without loader
+          fetchUserGroups(false);
+          fetchMatchLocations(false);
           showSuccess('Successfully left the group');
         }}
       />

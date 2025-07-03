@@ -36,6 +36,10 @@ export interface FirebaseAuthError extends Error {
     groupId: string;
     userId: string;
     locationId: string;
+    locationName?: string;
+    locationAddress?: string;
+    locationRating?: number;
+    locationPicture?: string;
   }
 
   export interface FilterData {
@@ -101,3 +105,26 @@ export interface FirebaseAuthError extends Error {
       photo_reference: string;
     }>;
   }
+
+  // Add these to your types.ts
+export interface MatchedUser {
+  id: string;
+  profileImage: string;
+}
+
+export interface MatchData {
+  matchId: string;
+  groupId: string;
+  locationId: string;
+  locationName: string;
+  locationImage: string;
+  locationRating: number;
+  locationDistance: string;
+  locationAddress: string;
+  locationTypes: string[];
+  matchedUsers: MatchedUser[];
+  matchedUsersCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  isActive: boolean;
+}

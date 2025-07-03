@@ -2,16 +2,15 @@ import { useState } from 'react';
 import { handleLogin } from './login';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { addDoc, collection, doc, setDoc, updateDoc, GeoPoint, runTransaction, 
+import { addDoc, DocumentData, collection, doc, setDoc, updateDoc, GeoPoint, runTransaction, 
   query, where, getDoc, getDocs, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
-import { AuthResult, AuthUser, FilterData, GroupData, UserData, LikeData } from './types';
+import { AuthResult, AuthUser, MatchData,FilterData, UserContext, MatchedUser, GroupData, UserData, LikeData } from './types';
 import { Group } from 'lucide-react-native';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [error, setError] = useState<string | null>(null);
-
   const handleRegister = async (
     userData: AuthUser & { location: { address: string; latitude: number; longitude: number } }
   ): Promise<AuthResult> => {
@@ -239,62 +238,120 @@ const fetchGroups = async (userId: string): Promise<GroupData[]> => {
     }
   };
 
-const createLike = async (likeData: LikeData): Promise<AuthResult> => {
-  setError(null);
+  const createLike = async (likeData: LikeData): Promise<AuthResult> => {
+    setError(null);
 
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
 
-    // 1. Validate that the group exists and user has permission
-    const groupRef = doc(db, 'groups', likeData.groupId);
-    const groupSnap = await getDoc(groupRef);
-    
-    if (!groupSnap.exists()) {
-      throw new Error('Group not found');
+      // 1. Validate that the group exists and user has permission
+      const groupRef = doc(db, 'groups', likeData.groupId);
+      const groupSnap = await getDoc(groupRef);
+      
+      if (!groupSnap.exists()) {
+        throw new Error('Group not found');
+      }
+      
+      const groupData = groupSnap.data();
+      // Check if user is member of the group (adjust field name as needed)
+      if (!groupData.members?.includes(user.uid)) {
+        throw new Error('User not authorized to like in this group');
+      }
+
+      // 2. Check for duplicate likes (same user, group, and location)
+      const likesQuery = query(
+        collection(db, 'likes'),
+        where('userId', '==', user.uid),
+        where('groupId', '==', likeData.groupId),
+        where('locationId', '==', likeData.locationId)
+      );
+      
+      const existingLikes = await getDocs(likesQuery);
+      if (!existingLikes.empty) {
+        throw new Error('You have already liked this location in this group');
+      }
+
+      // 3. Validate locationId format (basic Google Places place_id validation)
+      if (!likeData.locationId || !likeData.locationId.startsWith('ChIJ')) {
+        throw new Error('Invalid location ID format');
+      }
+
+      // 4. Check if other users in the same group have liked this location
+      const groupLikesQuery = query(
+        collection(db, 'likes'),
+        where('groupId', '==', likeData.groupId),
+        where('locationId', '==', likeData.locationId)
+      );
+      
+      const groupLikesSnap = await getDocs(groupLikesQuery);
+      const existingGroupLikes = groupLikesSnap.docs;
+
+      // Create like document
+      const likeRef = doc(collection(db, 'likes'));
+      await setDoc(likeRef, {
+        likeId: likeRef.id,
+        groupId: likeData.groupId,
+        userId: user.uid, // Always use authenticated user's ID for security
+        locationId: likeData.locationId,
+        createdAt: new Date().toISOString()
+      });
+
+      // 5. If there are existing likes for this location in the same group, create/update match
+      if (existingGroupLikes.length > 0) {
+        try {
+          await createOrUpdateMatch(likeData);
+        } catch (matchError) {
+          console.error('Error creating match:', matchError);
+          // Don't fail the like creation if match creation fails
+        }
+      }
+
+      return { success: true, likeId: likeRef.id };
+    } catch (error) {
+      console.error('Error creating like:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create like. Please try again.');
+      return { success: false, error: error as Error };
     }
-    
-    const groupData = groupSnap.data();
-    // Check if user is member of the group (adjust field name as needed)
-    if (!groupData.members?.includes(user.uid)) {
-      throw new Error('User not authorized to like in this group');
+  };
+
+  // Helper function to create or update match documents
+  const createOrUpdateMatch = async (likeData: LikeData): Promise<void> => {
+    try {
+      // Check if match already exists for this location and group
+      const matchQuery = query(
+        collection(db, 'matches'),
+        where('locationId', '==', likeData.locationId),
+        where('groupId', '==', likeData.groupId)
+      );
+      
+      const existingMatches = await getDocs(matchQuery);
+      
+      if (!existingMatches.empty) {
+        // Match already exists, no need to create another one
+        console.log('Match already exists for this location and group');
+        return;
+      }
+
+      // Create new match document using the venue data from DiscoverScreen
+      const matchRef = doc(collection(db, 'matches'));
+      await setDoc(matchRef, {
+        matchId: matchRef.id,
+        locationId: likeData.locationId,
+        locationName: likeData.locationName || 'Unknown Location',
+        locationAddress: likeData.locationAddress || 'Address not available',
+        locationRating: likeData.locationRating || 0,
+        locationPicture: likeData.locationPicture || 'https://picsum.photos/400/600',
+        groupId: likeData.groupId,
+        createdAt: new Date().toISOString()
+      });
+
+      console.log('Match created successfully:', matchRef.id);
+    } catch (error) {
+      console.error('Error in createOrUpdateMatch:', error);
+      throw error;
     }
-
-    // 2. Check for duplicate likes (same user, group, and location)
-    const likesQuery = query(
-      collection(db, 'likes'),
-      where('userId', '==', user.uid),
-      where('groupId', '==', likeData.groupId),
-      where('locationId', '==', likeData.locationId)
-    );
-    
-    const existingLikes = await getDocs(likesQuery);
-    if (!existingLikes.empty) {
-      throw new Error('You have already liked this location in this group');
-    }
-
-    // 3. Validate locationId format (basic Google Places place_id validation)
-    if (!likeData.locationId || !likeData.locationId.startsWith('ChIJ')) {
-      throw new Error('Invalid location ID format');
-    }
-
-    // Create like document
-    const likeRef = doc(collection(db, 'likes'));
-    await setDoc(likeRef, {
-      likeId: likeRef.id,
-      groupId: likeData.groupId,
-      userId: user.uid, // Always use authenticated user's ID for security
-      locationId: likeData.locationId,
-      createdAt: new Date().toISOString()
-    });
-
-    return { success: true, likeId: likeRef.id };
-  } catch (error) {
-    console.error('Error creating like:', error);
-    setError(error instanceof Error ? error.message : 'Failed to create like. Please try again.');
-    return { success: false, error: error as Error };
-  }
-};
+  };
 
   const joinGroup = async (groupCode: string): Promise<AuthResult> => {
     setLoading(true);
@@ -457,6 +514,81 @@ const leaveGroup = async (groupId: string): Promise<AuthResult> => {
     }
   };
 
+const fetchUserMatches = async (userId: string): Promise<MatchData[]> => {
+  try {
+    console.log('🔍 fetchUserMatches called with userId:', userId);
+
+    // 1. Fetch the user doc
+    const userDocRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userDocRef);
+
+    if (!userSnap.exists()) {
+      console.log('❌ User document not found');
+      return [];
+    }
+
+    const userData = userSnap.data() as { groupIds?: string[] };
+    const userGroupIds = userData.groupIds ?? [];
+
+    if (userGroupIds.length === 0) {
+      console.log('👥 User has no groups');
+      return [];
+    }
+
+    // 2. Firestore allows at most 10 items in an "in" query, so chunk if needed
+    const chunks: string[][] = [];
+    for (let i = 0; i < userGroupIds.length; i += 10) {
+      chunks.push(userGroupIds.slice(i, i + 10));
+    }
+
+    // 3. Run one query per chunk and accumulate
+    const allMatches: MatchData[] = [];
+
+    for (const chunk of chunks) {
+      const matchesQ = query(
+        collection(db, 'matches'),
+        where('groupId', 'in', chunk)
+      );
+      const snap = await getDocs(matchesQ);
+
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data() as DocumentData;
+  const userIdStrings: string[] = Array.isArray(data.userIds) ? data.userIds : [];
+   const matchedUsers: MatchedUser[] = userIdStrings.map(uid => ({
+    userId: uid,  
+  id: uid,
+profileImage: userData. || 'https://picsum.photos/200/300',}));
+
+        allMatches.push({
+          matchId: data.matchId || docSnap.id,
+          groupId: data.groupId,
+          locationId: data.locationId,
+          locationName: data.locationName,
+          locationImage: data.locationPicture, // original field name
+          locationRating: data.locationRating,
+          locationDistance: "5", // custom logic if you compute real distance
+          locationAddress: data.locationAddress,
+          locationTypes: Array.isArray(data.locationTypes) ? data.locationTypes : [],
+          matchedUsers,
+          matchedUsersCount: matchedUsers.length,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: new Date(),
+          isActive: data.isActive ?? true,
+        });
+      });
+    }
+
+    // 4. Sort descending by creation time
+    return allMatches.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
+
+  } catch (error) {
+    console.error('Error fetching user matches:', error);
+    return [];
+  }
+};
+
   return { 
     handleRegister, 
     performLogin, 
@@ -468,6 +600,7 @@ const leaveGroup = async (groupId: string): Promise<AuthResult> => {
     leaveGroup, 
     deleteGroup ,
     fetchGroups,
-    createLike
+    createLike,
+    fetchUserMatches
   };
 };

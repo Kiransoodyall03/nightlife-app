@@ -280,7 +280,6 @@ export default function DiscoverScreen() {
     setIsRefreshing(false);
   }, [isRefreshing, resetAndReloadVenues]);
 
-  // Updated handleSwipedRight with createLike integration
   const handleSwipedRight = async (index: number) => {
     const venue = venues[index];
     console.log(`Liked: ${venue.name} with group: ${selectedGroupName}`);
@@ -292,7 +291,12 @@ export default function DiscoverScreen() {
           likeId: '', // Will be auto-generated
           groupId: selectedGroupId,
           userId: '', // Will be overridden with authenticated user
-          locationId: venue.id // This is the Google Places place_id
+          locationId: venue.id, // This is the Google Places place_id
+          // Pass venue details for potential match creation
+          locationName: venue.name,
+          locationAddress: venue.description, // Using description as address
+          locationRating: venue.rating,
+          locationPicture: venue.image
         });
         
         if (result.success) {
