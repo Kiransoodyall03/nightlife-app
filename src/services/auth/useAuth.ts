@@ -557,7 +557,7 @@ const fetchUserMatches = async (userId: string): Promise<MatchData[]> => {
    const matchedUsers: MatchedUser[] = userIdStrings.map(uid => ({
     userId: uid,  
   id: uid,
-profileImage: userData. || 'https://picsum.photos/200/300',}));
+profileImage:  'https://picsum.photos/200/300',}));
 
         allMatches.push({
           matchId: data.matchId || docSnap.id,
