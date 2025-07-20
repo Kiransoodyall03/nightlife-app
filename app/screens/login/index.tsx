@@ -8,7 +8,6 @@ import { validateEmail } from '../../../src/services/auth/validation';
 import { LoginScreenNavigationProp } from '../../../types/navigation';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../../src/services/firebase/config';
 import { useUser } from 'src/context/UserContext';
 import { useNotification } from 'src/components/Notification/NotificationContext';
@@ -20,7 +19,7 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const  userData  = useUser();
   const [password, setPassword] = useState('');
-  const { performLogin, loading, error } = useAuth();
+  const { performLogin, loading, error, signInOrRegisterWithGoogle } = useAuth();
 
   // 🔴 Google Authentication Hook 🔴
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -28,16 +27,22 @@ const LoginScreen = () => {
     webClientId: process.env.EXPO_FIREBASE_CLIENT_ID, // From Firebase Project
   });
 
-  // 🔴 Handle Google Auth Response 🔴
   useEffect(() => {
+     console.log('EXPO_PUBLIC_GOOGLE_CLIENT_ID:', process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
+    console.log('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID:',  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+    console.log('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID:', process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
+    console.log('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID:', process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
     if (response?.type === 'success') {
       const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      
-      signInWithCredential(auth, credential)
-        .then(() => navigation.navigate('DrawerNavigator'))
-        .catch((error) => Alert.alert('Google Sign-In Error', error.message));
-        showError("Google Sigin error");
+      signInOrRegisterWithGoogle(id_token)
+        .then(() => {
+          showSuccess('Welcome, ' + userData?.userData?.username);
+          navigation.navigate('DrawerNavigator');
+        })
+        .catch((err) => {
+          console.error(err);
+          showError(err.message);
+        });
     }
   }, [response]);
 

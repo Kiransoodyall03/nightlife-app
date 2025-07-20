@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { handleLogin } from './login';
+import { signInWithCredential, GoogleAuthProvider, UserCredential } from 'firebase/auth';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { addDoc, DocumentData, collection, doc, setDoc, updateDoc, GeoPoint, runTransaction, 
@@ -117,6 +118,86 @@ const fetchGroups = async (userId: string): Promise<GroupData[]> => {
     throw new Error(`Failed to fetch groups: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
+
+ const signInWithGoogle = async (idToken: string): Promise<UserData> => {
+    // 1) create Firebase credential
+    
+    const credential = GoogleAuthProvider.credential(idToken);
+    // 2) sign in
+    const userCred: UserCredential = await signInWithCredential(auth, credential);
+    const { uid, email, displayName, photoURL } = userCred.user;
+    // 3) fetch Firestore user record
+    const userDocRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userDocRef);
+    if (!userSnap.exists()) {
+      throw new Error('No Firestore user found – call registerWithGoogle first.');
+    }
+    // 4) parse and return
+    const data = userSnap.data() as DocumentData;
+    const userData: UserData = {
+      uid,
+      email: email!,
+      username: data.username,
+      profilePicture: data.profilePicture ?? photoURL ?? '',
+      searchRadius: data.searchRadius,
+      createdAt: data.createdAt.toDate ? data.createdAt.toDate() : data.createdAt,
+      filterId: data.filterId,
+      groupIds: data.groupIds ?? [],
+    };
+    setUserData(userData);
+    return userData;
+  };
+
+  const registerWithGoogle = async (idToken: string): Promise<UserData> => {
+    // 1) sign in same as above
+    const credential = GoogleAuthProvider.credential(idToken);
+    const userCred: UserCredential = await signInWithCredential(auth, credential);
+    const { uid, email, displayName, photoURL } = userCred.user;
+
+    // 2) build your initial UserData
+    const newUser: UserData = {
+      uid,
+      email: email!,
+      username: displayName || email!.split('@')[0],
+      profilePicture: photoURL ?? '',
+      searchRadius: 5,        // default radius
+      createdAt: new Date(),
+      filterId: '',
+      groupIds: [],
+    };
+
+    // 3) write to Firestore
+    const userDocRef = doc(db, 'users', uid);
+    await setDoc(userDocRef, {
+      username: newUser.username,
+      email: newUser.email,
+      uid: newUser.uid,
+      profilePicture: newUser.profilePicture,
+      searchRadius: newUser.searchRadius,
+      filterId: newUser.filterId,
+      groupIds: newUser.groupIds,
+      createdAt: newUser.createdAt,
+    });
+
+    // 4) update local state and return
+    setUserData(newUser);
+    return newUser;
+  };
+
+  const signInOrRegisterWithGoogle = async (idToken: string) => {
+    try {
+      // Try to sign in (will throw if no Firestore record)
+      return await signInWithGoogle(idToken);
+    } catch (e) {
+      // If “no Firestore user” error, go register path
+      if ((e as Error).message.includes('No Firestore user')) {
+        return await registerWithGoogle(idToken);
+      }
+      throw e;
+    }
+
+  };
+
   // This would go in your handleFilters function
   const handleFilters = async (filterData: FilterData): Promise<AuthResult> => {
     setLoading(true);
@@ -601,6 +682,9 @@ profileImage:  'https://picsum.photos/200/300',}));
     deleteGroup ,
     fetchGroups,
     createLike,
-    fetchUserMatches
+    fetchUserMatches,
+    signInWithGoogle,
+    registerWithGoogle,
+    signInOrRegisterWithGoogle,
   };
 };
