@@ -1,69 +1,83 @@
-import React, { useState, useEffect } from 'react'; // Added useEffect
-import { View, Text, TextInput, TouchableOpacity, Image, ImageBackground, ActivityIndicator, Alert } from 'react-native';
-import { styles } from './styles';
-import TitleComponent from '../../../src/components/Title-Light/title-animated';
-import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../../../src/services/auth/useAuth';
-import { validateEmail } from '../../../src/services/auth/validation';
-import { LoginScreenNavigationProp } from '../../../types/navigation';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ImageBackground,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { auth } from '../../../src/services/firebase/config';
-import { useUser } from 'src/context/UserContext';
+import * as SecureStore from 'expo-secure-store';
+import { useNavigation } from '@react-navigation/native';
+
+import { styles } from './styles';
+import TitleComponent from '../../../src/components/Title-Light/title-animated';
+import { useUser } from '../../../src/context/UserContext';
 import { useNotification } from 'src/components/Notification/NotificationContext';
+import { LoginScreenNavigationProp } from '../../../types/navigation';
+import { validateEmail } from '../../../src/services/auth/validation';
+
 WebBrowser.maybeCompleteAuthSession();
 
-const LoginScreen = () => {
+export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const { showSuccess, showError } = useNotification();
-  const [email, setEmail] = useState('');
-  const  userData  = useUser();
-  const [password, setPassword] = useState('');
-  const { performLogin, loading, error, signInOrRegisterWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, loading } = useUser();
 
-  // 🔴 Google Authentication Hook 🔴
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Expo Google Auth hook
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, // From Google Cloud Console
-    webClientId: process.env.EXPO_FIREBASE_CLIENT_ID, // From Firebase Project
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId:     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    webClientId:     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 
   useEffect(() => {
-     console.log('EXPO_PUBLIC_GOOGLE_CLIENT_ID:', process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
-    console.log('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID:',  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-    console.log('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID:', process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
-    console.log('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID:', process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+    // Handle Google response
     if (response?.type === 'success') {
-      const { id_token } = response.params;
-      signInOrRegisterWithGoogle(id_token)
+      promptSaveGoogleToken()
+        .then(() => signInWithGoogle())
         .then(() => {
-          showSuccess('Welcome, ' + userData?.userData?.username);
+          showSuccess('Welcome back!');
           navigation.navigate('DrawerNavigator');
         })
-        .catch((err) => {
-          console.error(err);
-          showError(err.message);
-        });
+        .catch(err => showError(err.message));
     }
   }, [response]);
 
-  const handleSubmit = async () => {
+  // Save the id_token so UserContext can pick it up
+  const promptSaveGoogleToken = async () => {
+    if (response?.type === 'success' && response.authentication?.idToken) {
+      const idToken = response.authentication.idToken;
+      await SecureStore.setItemAsync('NL_googleId', idToken);
+    } else {
+      throw new Error('Google authentication failed or idToken missing');
+    }
+  };
+
+  const onEmailLogin = async () => {
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      showError('Input a valid email address');
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
-
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      showError('Password must be at least 6 characters long');
+      Alert.alert('Weak Password', 'Password must be at least 6 characters');
       return;
     }
 
-    const result = await performLogin(email, password);
-    
-    if (result.success) {
+    try {
+      await signIn(email, password);
+      showSuccess('Logged in successfully');
       navigation.navigate('DrawerNavigator');
-      showSuccess('Login Sucessful: ' + userData.userData?.username);
+    } catch (err: any) {
+      showError(err.message);
     }
   };
 
@@ -74,23 +88,50 @@ const LoginScreen = () => {
       resizeMode="cover"
     >
       <View style={styles.container}>
-        {/* Title Section */}
         <View style={styles.titleContainer}>
           <TitleComponent text="NightLife" />
         </View>
 
-        {/* Social Login Buttons */}
-        <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFFFFF' }]}>
-          <Image
-            source={require('@assets/icons/apple-icon.png')}
-            style={styles.socialIcon}
-          />
-          <Text style={[styles.socialButtonText, { color: '#000000' }]}>Continue with Apple</Text>
+        {/* Removed authError display since error is not available from useUser */}
+
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#C4C4C4"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor="#C4C4C4"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={onEmailLogin}
+          disabled={loading}
+        >
+          {loading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.loginButtonText}>Log In</Text>
+          }
         </TouchableOpacity>
 
-        {/* 🔴 Updated Google Sign-In Button 🔴 */}
-        <TouchableOpacity 
-          style={[styles.socialButton, { backgroundColor: '#FFFFFF' }]}
+        <View style={styles.dividerContainer}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.socialButton, { backgroundColor: '#fff' }]}
           onPress={() => promptAsync()}
           disabled={!request}
         >
@@ -98,59 +139,16 @@ const LoginScreen = () => {
             source={require('@assets/icons/google-icon.png')}
             style={styles.socialIcon}
           />
-          <Text style={[styles.socialButtonText, { color: '#000000' }]}>
-            Continue with Google
-          </Text>
+          <Text style={styles.socialButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
-        {/* Rest of your existing components */}
-        <View style={styles.dividerContainer}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TextInput 
-          style={styles.input} 
-          placeholder="Enter Your Email" 
-          placeholderTextColor="#C4C4C4"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Your Password"
-          placeholderTextColor="#C4C4C4"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
-
-        <TouchableOpacity 
-          style={styles.loginButton}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.loginButtonText}>Log-in</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.signUpButton}
           onPress={() => navigation.navigate('Register')}
         >
-          <Text style={styles.signUpButtonText}>Sign-up</Text>
+          <Text style={styles.signUpButtonText}>Sign Up</Text>
         </TouchableOpacity>
       </View>
     </ImageBackground>
   );
-};
-
-export default LoginScreen;
+}

@@ -40,21 +40,22 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-  "expo-router",
-  "@react-native-firebase/app",
-  "expo-font",
-  [
-    "expo-build-properties",
-    {
-      "ios": {
-        "useFrameworks": "static"
-      },
-      "android": {
-        "enableProguardInReleaseBuilds": true
-      }
-    }
-  ]
-],
+      "expo-router",
+      "@react-native-firebase/app",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          },
+          "android": {
+            "enableProguardInReleaseBuilds": true
+          }
+        }
+      ],
+      "expo-secure-store"
+    ],
     "extra": {
       "router": {
         "origin": false

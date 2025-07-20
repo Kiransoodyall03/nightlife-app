@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { styles } from './styles';
-import { useAuth } from '../../../src/services/auth/useAuth';
-import { validateEmail, validatePassword, validateUsername } from '../../../src/services/auth/validation';
-import TitleComponent from '../../../src/components/Title-Light/title-animated';
-import { NavigationProp } from '@react-navigation/native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import * as Location from 'expo-location';
 import axios from 'axios';
+import { NavigationProp } from '@react-navigation/native';
 
-const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
+import { styles } from './styles';
+import TitleComponent from '../../../src/components/Title-Light/title-animated';
+import { useUser } from '../../../src/context/UserContext';
+import {
+  validateEmail,
+  validatePassword,
+  validateUsername
+} from '../../../src/services/auth/validation';
+
+const GEOCODING_API   = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
 interface ValidationState {
@@ -16,197 +28,148 @@ interface ValidationState {
   message: string;
 }
 
-const RegisterScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [location, setLocation] = useState<{ address: string; latitude: number; longitude: number } | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const { handleRegister, loading, error } = useAuth();
+export default function RegisterScreen({
+  navigation,
+}: {
+  navigation: NavigationProp<any>;
+}) {
+  const { register, loading } = useUser();
 
-  // Validation states
-  const [usernameValidation, setUsernameValidation] = useState<ValidationState>({ isValid: true, message: '' });
-  const [emailValidation, setEmailValidation] = useState<ValidationState>({ isValid: true, message: '' });
-  const [passwordValidation, setPasswordValidation] = useState<ValidationState>({ isValid: true, message: '' });
-  const [confirmPasswordValidation, setConfirmPasswordValidation] = useState<ValidationState>({ isValid: true, message: '' });
+  const [username, setUsername]         = useState('');
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
+  const [confirmPassword, setConfirm]   = useState('');
+  const [location, setLocation]         = useState<{ address: string; latitude: number; longitude: number } | null>(null);
+  const [locLoading, setLocLoading]     = useState(false);
 
-  // Fetch user location
-  const fetchLocation = async () => {
-    try {
-      setLocationLoading(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to register.');
-        return;
-      }
+  const [userVal, setUserVal]           = useState<ValidationState>({ isValid: true, message: '' });
+  const [emailVal, setEmailVal]         = useState<ValidationState>({ isValid: true, message: '' });
+  const [pwVal, setPwVal]               = useState<ValidationState>({ isValid: true, message: '' });
+  const [confirmVal, setConfirmVal]     = useState<ValidationState>({ isValid: true, message: '' });
 
-      const { coords } = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = coords;
-
-      // Get address using Google Geocoding API
-      const response = await axios.get(GEOCODING_API, {
-        params: {
-          latlng: `${latitude},${longitude}`,
-          key: GOOGLE_API_KEY,
-          result_type: 'street_address|locality'
-        }
-      });
-
-      if (response.data.status === 'OK' && response.data.results[0]) {
-        setLocation({
-          address: response.data.results[0].formatted_address,
-          latitude,
-          longitude
-        });
-      } else {
-        setLocation({
-          address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-          latitude,
-          longitude
-        });
-      }
-    } catch (error) {
-     // console.error('Location error:', error);
-      Alert.alert('Error', 'Failed to fetch location. Please try again.');
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
-  // Fetch location on component mount
+  // Real‑time validation
   useEffect(() => {
-    fetchLocation();
-  }, []);
-
-  // Real-time validation effects
-  useEffect(() => {
-    if (username) setUsernameValidation({ isValid: validateUsername(username), message: validateUsername(username) ? '✓ Valid username' : '⚠️ Username must be at least 3 characters' });
+    setUserVal({ isValid: validateUsername(username), message: validateUsername(username) ? '✓' : '3+ chars' });
   }, [username]);
-
   useEffect(() => {
-    if (email) setEmailValidation({ isValid: validateEmail(email), message: validateEmail(email) ? '✓ Valid email' : '⚠️ Please enter a valid email address' });
+    setEmailVal({ isValid: validateEmail(email), message: validateEmail(email) ? '✓' : 'Invalid email' });
   }, [email]);
-
   useEffect(() => {
-    if (password) setPasswordValidation({ isValid: validatePassword(password), message: validatePassword(password) ? '✓ Password meets requirements' : '⚠️ Password must be at least 6 characters' });
+    setPwVal({ isValid: validatePassword(password), message: validatePassword(password) ? '✓' : '6+ chars' });
   }, [password]);
-
   useEffect(() => {
-    if (confirmPassword) setConfirmPasswordValidation({ isValid: password === confirmPassword, message: password === confirmPassword ? '✓ Passwords match' : '⚠️ Passwords do not match' });
+    setConfirmVal({ isValid: password === confirmPassword, message: password === confirmPassword ? '✓' : 'Doesn’t match' });
   }, [confirmPassword, password]);
 
-  const handleSubmit = async () => {
-    if (!validateUsername(username) || 
-        !validateEmail(email) || 
-        !validatePassword(password) || 
-        password !== confirmPassword) {
-      Alert.alert('Error', 'Please fix all validation errors before submitting');
-      return;
-    }
-
-    if (!location) {
-      Alert.alert('Error', 'Location is required');
-      return;
-    } 
-
+  // Fetch user’s address via Expo‑Location + Geocoding
+  const fetchLocation = async () => {
+    setLocLoading(true);
     try {
-      const result = await handleRegister({
-        username,
-        email,
-        password,
-        location: {
-          address: location.address,
-          latitude: location.latitude,
-          longitude: location.longitude
-        }
-        
-      });
-
-      if (result.success) {
-        navigation.navigate('Filter');
-      } else {
-        Alert.alert('Error', error || 'Registration failed');
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Location permission is needed to register.');
+        return;
       }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to create location record');
+      const { coords } = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = coords;
+      const resp = await axios.get(GEOCODING_API, {
+        params: { latlng: `${latitude},${longitude}`, key: GOOGLE_API_KEY, result_type: 'street_address|locality' },
+      });
+      if (resp.data.status === 'OK' && resp.data.results[0]) {
+        setLocation({ address: resp.data.results[0].formatted_address, latitude, longitude });
+      } else {
+        setLocation({ address: `${latitude.toFixed(6)},${longitude.toFixed(6)}`, latitude, longitude });
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to fetch location.');
+    } finally {
+      setLocLoading(false);
     }
   };
 
-  const getValidationTextStyle = (isValid: boolean) => ({
-    fontSize: 12,
-    marginTop: 2,
-    marginBottom: 8,
-    color: isValid ? '#4CAF50' : '#F44336',
-  });
+  useEffect(() => { fetchLocation(); }, []);
+
+  const onSubmit = async () => {
+    if (!userVal.isValid || !emailVal.isValid || !pwVal.isValid || !confirmVal.isValid) {
+      Alert.alert('Fix errors', 'Please correct the form before submitting.');
+      return;
+    }
+    if (!location) {
+      Alert.alert('Location missing', 'Unable to determine your address.');
+      return;
+    }
+
+    try {
+      await register({
+        email,
+        password,
+        username,
+        location,
+      });
+      navigation.navigate('Filter');
+    } catch (err: any) {
+      Alert.alert('Registration failed', err.message);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <TitleComponent text="NightLife" />
-      
-      {/* Location Section */}
-      {locationLoading ? (
-        <View style={styles.locationContainer}>
-          <ActivityIndicator size="small" color="#000" />
-          <Text style={styles.locationText}>Fetching location...</Text>
-        </View>
-      ) : location ? (
-        <View style={styles.locationContainer}>
-        </View>
-      ) : (
-        <View style={styles.locationContainer}>
-        </View>
-      )}
 
-      {/* Rest of the form */}
+      {locLoading
+        ? <ActivityIndicator size="small" />
+        : location && <Text style={styles.locationText}>{location.address}</Text>
+      }
+
       <TextInput
-        style={[styles.input, !usernameValidation.isValid && username && styles.inputError]}
+        style={[styles.input, username && !userVal.isValid && styles.inputError]}
         placeholder="Username"
+        autoCapitalize="none"
         value={username}
         onChangeText={setUsername}
-        autoCapitalize="none"
       />
-      {username && <Text style={getValidationTextStyle(usernameValidation.isValid)}>{usernameValidation.message}</Text>}
+      {username !== '' && <Text style={styles.valText}>{userVal.message}</Text>}
 
       <TextInput
-        style={[styles.input, !emailValidation.isValid && email && styles.inputError]}
+        style={[styles.input, email && !emailVal.isValid && styles.inputError]}
         placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
       />
-      {email && <Text style={getValidationTextStyle(emailValidation.isValid)}>{emailValidation.message}</Text>}
+      {email !== '' && <Text style={styles.valText}>{emailVal.message}</Text>}
 
       <TextInput
-        style={[styles.input, !passwordValidation.isValid && password && styles.inputError]}
+        style={[styles.input, password && !pwVal.isValid && styles.inputError]}
         placeholder="Password"
+        secureTextEntry
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
       />
-      {password && <Text style={getValidationTextStyle(passwordValidation.isValid)}>{passwordValidation.message}</Text>}
+      {password !== '' && <Text style={styles.valText}>{pwVal.message}</Text>}
 
       <TextInput
-        style={[styles.input, !confirmPasswordValidation.isValid && confirmPassword && styles.inputError]}
+        style={[styles.input, confirmPassword && !confirmVal.isValid && styles.inputError]}
         placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
         secureTextEntry
+        value={confirmPassword}
+        onChangeText={setConfirm}
       />
-      {confirmPassword && <Text style={getValidationTextStyle(confirmPasswordValidation.isValid)}>{confirmPasswordValidation.message}</Text>}
+      {confirmPassword !== '' && <Text style={styles.valText}>{confirmVal.message}</Text>}
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
-      
-      <TouchableOpacity 
-        style={[styles.button, (!usernameValidation.isValid || !emailValidation.isValid || !passwordValidation.isValid || !confirmPasswordValidation.isValid || !location) && styles.buttonDisabled]} 
-        onPress={handleSubmit}
-        disabled={loading || !usernameValidation.isValid || !emailValidation.isValid || !passwordValidation.isValid || !confirmPasswordValidation.isValid || !location}
+      {/* If you want to show an error, ensure your context provides it, or remove this line */}
+
+      <TouchableOpacity
+        style={[styles.button, (loading || !location) && styles.buttonDisabled]}
+        onPress={onSubmit}
+        disabled={loading || !location}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Register</Text>}
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.buttonText}>Register</Text>
+        }
       </TouchableOpacity>
     </View>
   );
-};
-
-export default RegisterScreen;
+}
