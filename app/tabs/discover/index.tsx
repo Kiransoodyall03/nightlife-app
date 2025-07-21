@@ -15,7 +15,7 @@ import { GooglePlace } from 'src/services/auth/types';
 
 export default function DiscoverScreen() {
   const { fetchNearbyPlaces, userData, locationData } = useUser();
-  const { createLike } = useAuth(); // Add this line
+  const { createLike } = useAuth();
   const [venues, setVenues] = useState<Venue[]>([]);
   const swiperRef = useRef<Swiper<Venue> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,20 +126,57 @@ export default function DiscoverScreen() {
   }, [locationData]);
 
   const transformPlacesToVenues = useCallback((places: GooglePlace[]): Venue[] => {
-    return places.map(place => ({
-      id: place.place_id,
-      name: place.name || 'Unnamed Venue',
-      image: place.photos?.[0]?.photo_reference 
+    return places.map(place => {
+      console.log('🏪 Processing place:', place.name);
+      console.log('📸 Raw photos from Google Places:', place.photos);
+      console.log('📊 Photos count:', place.photos?.length || 0);
+
+      // Log each photo reference
+      place.photos?.forEach((photo, index) => {
+        console.log(`📷 Photo ${index + 1} reference:`, photo.photo_reference);
+      });
+
+      const mainImage = place.photos?.[0]?.photo_reference 
         ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
-        : 'https://picsum.photos/400/600',
-      description: place.vicinity || 'Address not available',
-      type: [...(place.types || []), ...activeFilters].join(', ') || 'Venue',
-      rating: place.rating || 0,
-      distance: calculateDistance({
-        lat: place.geometry?.location?.lat,
-        lng: place.geometry?.location?.lng
-      })
-    }));
+        : 'https://picsum.photos/400/600';
+
+      console.log('🖼️ Main image URL:', mainImage);
+
+      // Add additional images from Google Places photos (up to 3 total)
+      const additionalImages = place.photos?.slice(1, 3)?.map((photo, index) => {
+        const imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${GOOGLE_API_KEY}`;
+        console.log(`🖼️ Additional image ${index + 1} URL:`, imageUrl);
+        return imageUrl;
+      }) || [];
+
+      console.log('🎨 Total additional images:', additionalImages.length);
+      console.log('🎨 Additional images array:', additionalImages);
+
+      const venue = {
+        id: place.place_id,
+        name: place.name || 'Unnamed Venue',
+        image: mainImage,
+        images: additionalImages,
+        description: place.vicinity || 'Address not available',
+        type: [...(place.types || []), ...activeFilters].join(', ') || 'Venue',
+        rating: place.rating || 0,
+        distance: calculateDistance({
+          lat: place.geometry?.location?.lat,
+          lng: place.geometry?.location?.lng
+        })
+      };
+
+      console.log('🏗️ Final venue object for', venue.name, ':', {
+        id: venue.id,
+        name: venue.name,
+        hasMainImage: !!venue.image,
+        additionalImagesCount: venue.images?.length || 0,
+        mainImage: venue.image,
+        additionalImages: venue.images
+      });
+
+      return venue;
+    });
   }, [GOOGLE_API_KEY, calculateDistance, activeFilters]);
 
   const loadInitialData = useCallback(async () => {
@@ -163,13 +200,24 @@ export default function DiscoverScreen() {
       venueIdsRef.current.clear();
       
       const response = await fetchNearbyPlaces({ types: activeFilters });
+      console.log('🌐 Raw Google Places API response:', response);
+      console.log('📍 Total places returned:', response.results.length);
       
       if (response.results.length === 0) {
         showError('No venues found matching your filters. Try adjusting your preferences.');
         setVenues([]);
       } else {
+        console.log('🔄 Starting venue transformation...');
         const transformedVenues = transformPlacesToVenues(response.results);
-        console.log(`Successfully loaded ${transformedVenues.length} venues`);
+        console.log(`✅ Successfully transformed ${transformedVenues.length} venues`);
+        
+        // Log summary of all venues with their image counts
+        transformedVenues.forEach((venue, index) => {
+          console.log(`📋 Venue ${index + 1}: ${venue.name}`);
+          console.log(`   - Main image: ${venue.image ? '✅' : '❌'}`);
+          console.log(`   - Additional images: ${venue.images?.length || 0}`);
+          console.log(`   - Total images available: ${1 + (venue.images?.length || 0)}`);
+        });
         
         // Track IDs to prevent duplicates
         transformedVenues.forEach(venue => venueIdsRef.current.add(venue.id));
@@ -181,7 +229,7 @@ export default function DiscoverScreen() {
       
       setInitialLoadDone(true);
     } catch (error) {
-      console.error("Error loading venues:", error);
+      console.error("❌ Error loading venues:", error);
       showError("Failed to load venues. Please try again.");
     } finally {
       setIsLoading(false);
@@ -191,7 +239,7 @@ export default function DiscoverScreen() {
   // Only trigger the initial load once (or when locationData changes)
   useEffect(() => {
     if (locationData && userFilters.length > 0 && !initialLoadDone) {
-      console.log("Calling loadInitialData from useEffect");
+      console.log("🚀 Calling loadInitialData from useEffect");
       loadInitialData();
     }
   }, [locationData, userFilters, initialLoadDone, loadInitialData]);
@@ -201,6 +249,7 @@ export default function DiscoverScreen() {
   
     try {
       setIsLoadingMore(true);
+      console.log('📄 Loading more data with token:', nextPageToken);
       
       // Add small delay for Google API pagination to be ready
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -209,6 +258,8 @@ export default function DiscoverScreen() {
         pageToken: nextPageToken,
         types: userFilters,
       });
+      
+      console.log('📄 More data response:', response.results.length, 'new places');
       
       if (response.results.length === 0) {
         setNextPageToken(null);
@@ -220,6 +271,8 @@ export default function DiscoverScreen() {
       const newPlaces = response.results.filter(place => 
         !venueIdsRef.current.has(place.place_id)
       );
+      
+      console.log('🔍 Filtered out duplicates:', newPlaces.length, 'unique places remaining');
       
       if (newPlaces.length === 0) {
         // If we got only duplicates, try to get the next page
@@ -244,10 +297,11 @@ export default function DiscoverScreen() {
       setNextPageToken(response.nextPageToken);
       
       if (newVenues.length > 0) {
+        console.log('✅ Added', newVenues.length, 'new venues to the stack');
         showSuccess(`Loaded ${newVenues.length} more venues!`);
       }
     } catch (error) {
-      console.error("Error loading more venues:", error);
+      console.error("❌ Error loading more venues:", error);
       showError("Failed to load more venues. Please try again.");
     } finally {
       setIsLoadingMore(false);
@@ -255,19 +309,23 @@ export default function DiscoverScreen() {
   }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, userFilters, showSuccess, showError, transformPlacesToVenues]);
 
   const handleSwipedAll = useCallback(() => {
+    console.log('🔄 All cards swiped, checking for more data...');
     if (nextPageToken) {
+      console.log('📄 More data available, loading...');
       loadMoreData().then(() => {
         // Only jump to index 0 if we have venues
         if (venues.length > 0) {
           // Small delay to make sure new cards are rendered
           setTimeout(() => {
             if (swiperRef.current) {
+              console.log('🔄 Jumping back to first card');
               swiperRef.current.jumpToCardIndex(0);
             }
           }, 300);
         }
       });
     } else {
+      console.log('🚫 No more venues available');
       showError('No more venues in your area');
     }
   }, [nextPageToken, loadMoreData, showError, venues.length]);
@@ -275,6 +333,7 @@ export default function DiscoverScreen() {
   const refreshVenues = useCallback(() => {
     if (isRefreshing) return;
     
+    console.log('🔄 Refreshing venues...');
     setIsRefreshing(true);
     resetAndReloadVenues();
     setIsRefreshing(false);
@@ -282,7 +341,12 @@ export default function DiscoverScreen() {
 
   const handleSwipedRight = async (index: number) => {
     const venue = venues[index];
-    console.log(`Liked: ${venue.name} with group: ${selectedGroupName}`);
+    console.log(`❤️ Liked: ${venue.name} with group: ${selectedGroupName}`);
+    console.log('❤️ Venue images:', {
+      mainImage: venue.image,
+      additionalImages: venue.images,
+      totalImages: 1 + (venue.images?.length || 0)
+    });
     
     // Only create like if a group is selected (not Personal Preferences)
     if (selectedGroupId) {
@@ -311,13 +375,19 @@ export default function DiscoverScreen() {
       }
     } else {
       // For Personal Preferences, just log (or implement personal preference storage)
-      console.log(`Liked ${venue.name} for personal preferences`);
+      console.log(`❤️ Liked ${venue.name} for personal preferences`);
       showSuccess(`${venue.name} noted as liked!`);
     }
   };
 
   const handleSwipedLeft = (index: number) => {
-    console.log(`Passed: ${venues[index].name} with group: ${selectedGroupName}`);
+    const venue = venues[index];
+    console.log(`👈 Passed: ${venue.name} with group: ${selectedGroupName}`);
+    console.log('👈 Venue images:', {
+      mainImage: venue.image,
+      additionalImages: venue.images,
+      totalImages: 1 + (venue.images?.length || 0)
+    });
     // Here you could implement dislike logic if needed
   };
 
@@ -374,15 +444,26 @@ export default function DiscoverScreen() {
         <Swiper
           ref={swiperRef}
           cards={venues}
-          renderCard={(venue) => venue && (
-            <VenueCard 
-              venue={venue}
-              onLike={() => swiperRef.current?.swipeRight()}
-              onDislike={() => swiperRef.current?.swipeLeft()}
-              onRewind={() => swiperRef.current?.swipeBack()}
-              selectedGroupName={selectedGroupName} // Pass the selected group name to display on card
-            />
-          )}
+          renderCard={(venue) => {
+            if (!venue) return null;
+            
+            console.log('🎴 Rendering card for:', venue.name);
+            console.log('🎴 Card images:', {
+              mainImage: venue.image,
+              additionalImages: venue.images,
+              totalImages: 1 + (venue.images?.length || 0)
+            });
+            
+            return (
+              <VenueCard 
+                venue={venue}
+                onLike={() => swiperRef.current?.swipeRight()}
+                onDislike={() => swiperRef.current?.swipeLeft()}
+                onRewind={() => swiperRef.current?.swipeBack()}
+                selectedGroupName={selectedGroupName} // Pass the selected group name to display on card
+              />
+            );
+          }}
           onSwipedRight={handleSwipedRight}
           onSwipedLeft={handleSwipedLeft}
           onSwipedAll={handleSwipedAll}

@@ -131,5 +131,53 @@ export default StyleSheet.create({
     color: '#000',
     fontSize: 14,
   },
+    imageIndicator: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  indicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    marginHorizontal: 2,
+  },
+  activeDot: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  },
+  // Tap instruction styles
+  tapInstruction: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  tapInstructionText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '500',
+    opacity: 0.8,
+  },
   
+  // Action button styles (if using Pressable instead of Button component)
+  actionButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
 });
