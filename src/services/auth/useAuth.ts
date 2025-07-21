@@ -529,7 +529,7 @@ const leaveGroup = async (groupId: string): Promise<AuthResult> => {
   }
 };
 
-  const deleteGroup = async (groupId: string): Promise<AuthResult> => {
+const deleteGroup = async (groupId: string): Promise<AuthResult> => {
     setLoading(true);
     setError(null);
 
@@ -551,15 +551,37 @@ const leaveGroup = async (groupId: string): Promise<AuthResult> => {
         return { success: false, error: new Error('Not authorized') };
       }
 
+      // Get all likes associated with this group
+      const likesQuery = query(
+        collection(db, 'likes'),
+        where('groupId', '==', groupId)
+      );
+      const likesSnapshot = await getDocs(likesQuery);
+
+      // Delete all likes associated with the group
+      const deleteLikesPromises = likesSnapshot.docs.map(likeDoc => 
+        deleteDoc(doc(db, 'likes', likeDoc.id))
+      );
+
       // Remove group from all members' groupIds
       const members = groupData.members || [];
-      const updatePromises = members.map((memberId: string) => 
+      const updateMembersPromises = members.map((memberId: string) => 
         updateDoc(doc(db, 'users', memberId), {
           groupIds: arrayRemove(groupId)
         })
       );
-      
-      await Promise.all(updatePromises);
+
+      // Remove group from current user's groupIds (in case they're not in members array)
+      const updateCurrentUserPromise = updateDoc(doc(db, 'users', user.uid), {
+        groupIds: arrayRemove(groupId)
+      });
+
+      // Execute all operations in parallel
+      await Promise.all([
+        ...deleteLikesPromises,
+        ...updateMembersPromises,
+        updateCurrentUserPromise
+      ]);
 
       // Delete the group document
       await deleteDoc(doc(db, 'groups', groupId));
@@ -573,7 +595,6 @@ const leaveGroup = async (groupId: string): Promise<AuthResult> => {
       setLoading(false);
     }
   };
-
   const performLogin = async (email: string, password: string): Promise<AuthResult> => {
     setLoading(true);
     setError(null);

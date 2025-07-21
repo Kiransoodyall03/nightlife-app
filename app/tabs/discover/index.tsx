@@ -133,14 +133,14 @@ export default function DiscoverScreen() {
         ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
         : 'https://picsum.photos/400/600',
       description: place.vicinity || 'Address not available',
-      type: place.types?.join(', ') || 'Venue',
+      type: [...(place.types || []), ...activeFilters].join(', ') || 'Venue',
       rating: place.rating || 0,
       distance: calculateDistance({
         lat: place.geometry?.location?.lat,
         lng: place.geometry?.location?.lng
       })
     }));
-  }, [GOOGLE_API_KEY, calculateDistance]);
+  }, [GOOGLE_API_KEY, calculateDistance, activeFilters]);
 
   const loadInitialData = useCallback(async () => {
     try {

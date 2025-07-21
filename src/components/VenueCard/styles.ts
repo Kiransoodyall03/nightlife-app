@@ -44,7 +44,9 @@ export default StyleSheet.create({
     marginLeft: 10,
   },
   tag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FF3F7D',
     padding: 8,
     paddingHorizontal: 8,
     borderRadius: 16,
@@ -52,8 +54,9 @@ export default StyleSheet.create({
     textAlign: 'center',
   },
   tagText: {
-    color: '#fff',
+    color: '#FF3F7D',
     fontSize: 16,
+    fontFamily: 'Jaldi-Bold',
   },
   typesContainer: {
     flexDirection: 'row',
