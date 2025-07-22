@@ -15,7 +15,7 @@ import { GooglePlace } from 'src/services/auth/types';
 
 export default function DiscoverScreen() {
   const { fetchNearbyPlaces, userData, locationData } = useUser();
-  const { createLike } = useAuth();
+  const { createLikeWithComprehensiveDebug } = useAuth();
   const [venues, setVenues] = useState<Venue[]>([]);
   const swiperRef = useRef<Swiper<Venue> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,6 +125,16 @@ export default function DiscoverScreen() {
     return `${(R * c).toFixed(1)} km`;
   }, [locationData]);
 
+  const validateFilters = (filters: string[]) => {
+    if (!filters || filters.length === 0) {
+      showError('No filters selected. Using default filters.');
+      return ['bar', 'restaurant', 'cafe', 'night_club'];
+    }
+    return filters;
+  };
+
+  // Then in both loadInitialData and loadMoreData:
+  const validatedFilters = validateFilters(activeFilters);
   const transformPlacesToVenues = useCallback((places: GooglePlace[]): Venue[] => {
     return places.map(place => {
       console.log('🏪 Processing place:', place.name);
@@ -158,7 +168,10 @@ export default function DiscoverScreen() {
         image: mainImage,
         images: additionalImages,
         description: place.vicinity || 'Address not available',
-        type: [...(place.types || []), ...activeFilters].join(', ') || 'Venue',
+      type: (place.types || [])
+    .filter(type => !activeFilters.includes(type)) // Remove duplicates
+    .concat(activeFilters)
+    .join(', ') || 'Venue',
         rating: place.rating || 0,
         distance: calculateDistance({
           lat: place.geometry?.location?.lat,
@@ -256,7 +269,7 @@ export default function DiscoverScreen() {
       
       const response = await fetchNearbyPlaces({
         pageToken: nextPageToken,
-        types: userFilters,
+        types: activeFilters,
       });
       
       console.log('📄 More data response:', response.results.length, 'new places');
@@ -339,46 +352,93 @@ export default function DiscoverScreen() {
     setIsRefreshing(false);
   }, [isRefreshing, resetAndReloadVenues]);
 
-  const handleSwipedRight = async (index: number) => {
-    const venue = venues[index];
-    console.log(`❤️ Liked: ${venue.name} with group: ${selectedGroupName}`);
-    console.log('❤️ Venue images:', {
-      mainImage: venue.image,
-      additionalImages: venue.images,
-      totalImages: 1 + (venue.images?.length || 0)
-    });
+const handleSwipedRight = async (index: number) => {
+  const venue = venues[index];
+  console.log('=== SWIPE RIGHT DEBUG START ===');
+  console.log(`❤️ Liked: ${venue.name} with group: ${selectedGroupName}`);
+  console.log(`🆔 Selected Group ID: ${selectedGroupId}`);
+  console.log(`📍 Venue ID: ${venue.id}`);
+  console.log(`📊 Venue Rating: ${venue.rating}`);
+  console.log('❤️ Venue images:', {
+    mainImage: venue.image,
+    additionalImages: venue.images,
+    totalImages: 1 + (venue.images?.length || 0)
+  });
+  
+  // Validate venue ID format
+  if (!venue.id) {
+    console.error('❌ ERROR: Venue ID is missing');
+    showError('Invalid venue data - missing ID');
+    return;
+  }
+  
+  if (!venue.id.startsWith('ChIJ')) {
+    console.warn('⚠️ WARNING: Venue ID does not start with ChIJ:', venue.id);
+    console.log('📝 This might be a test ID or different format');
+  }
+  
+  // Only create like if a group is selected (not Personal Preferences)
+  if (selectedGroupId) {
+    console.log('✅ Group selected, proceeding with like creation...');
     
-    // Only create like if a group is selected (not Personal Preferences)
-    if (selectedGroupId) {
-      try {
-        const result = await createLike({
-          likeId: '', // Will be auto-generated
-          groupId: selectedGroupId,
-          userId: '', // Will be overridden with authenticated user
-          locationId: venue.id, // This is the Google Places place_id
-          // Pass venue details for potential match creation
-          locationName: venue.name,
-          locationAddress: venue.description, // Using description as address
-          locationRating: venue.rating,
-          locationPicture: venue.image
-        });
+    try {
+      const likeData = {
+        likeId: '', // Will be auto-generated
+        groupId: selectedGroupId,
+        userId: '', // Will be overridden with authenticated user
+        locationId: venue.id, // This is the Google Places place_id
+        // Pass venue details for potential match creation
+        locationName: venue.name,
+        locationAddress: venue.description, // Using description as address
+        locationRating: venue.rating,
+        locationPicture: venue.image,
+      };
+      
+      console.log('📤 Sending likeData:', likeData);
+      console.log('🔄 Calling createLike...');
+      
+      const result = await createLikeWithComprehensiveDebug(likeData);
+      
+      console.log('📥 createLike result:', result);
+      
+      if (result.success) {
+        console.log('✅ Like created successfully!');
+        showSuccess(`${venue.name} added to ${selectedGroupName}!`);
         
-        if (result.success) {
-          showSuccess(`${venue.name} added to ${selectedGroupName}!`);
-        } else {
-          // Error will be handled by the error state in useAuth
-          console.error('Failed to create like:', result.error);
-        }
-      } catch (error) {
-        console.error('Error creating like:', error);
-        // Don't show error here since createLike handles it
+        // Optional: Trigger a refresh of matches
+        // await refreshMatches();
+      } else {
+        console.error('❌ Failed to create like:', result.error);
+        showError(result.error?.message || 'Failed to add like');
       }
-    } else {
-      // For Personal Preferences, just log (or implement personal preference storage)
-      console.log(`❤️ Liked ${venue.name} for personal preferences`);
-      showSuccess(`${venue.name} noted as liked!`);
+    } catch (error) {
+      console.error('💥 Exception in handleSwipedRight:', error);
+      showError('An unexpected error occurred');
     }
-  };
+  } else {
+    // For Personal Preferences, just log (or implement personal preference storage)
+    console.log(`❤️ Liked ${venue.name} for personal preferences`);
+    showSuccess(`${venue.name} noted as liked!`);
+  }
+  
+  console.log('=== SWIPE RIGHT DEBUG END ===');
+};
+
+// Helper function to validate venue data (call this before swiping if needed)
+const validateVenueData = (venue: any) => {
+  const issues = [];
+  
+  if (!venue.id) issues.push('Missing venue ID');
+  if (!venue.name) issues.push('Missing venue name');
+  if (!selectedGroupId) issues.push('No group selected');
+  
+  if (issues.length > 0) {
+    console.error('🚨 Venue validation issues:', issues);
+    return false;
+  }
+  
+  return true;
+};
 
   const handleSwipedLeft = (index: number) => {
     const venue = venues[index];

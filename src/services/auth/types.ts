@@ -54,6 +54,8 @@ export interface FirebaseAuthError extends Error {
     latitude: number;
     longitude: number;
     address?: string;
+    accuracy?: number | null;
+    timestamp?: string;
   };
 
   export interface GroupData {

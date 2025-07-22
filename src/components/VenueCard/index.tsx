@@ -78,7 +78,6 @@ export default function VenueCard({
   return (
     <View style={styles.card}>
       <Pressable 
-        onPress={handleImageClick}
         style={{ flex: 1 }}
         android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
       >
@@ -87,28 +86,6 @@ export default function VenueCard({
           style={styles.image} 
           resizeMode="cover"
         >
-          {/* Image indicator dots - only show if multiple images */}
-          {availableImages.length > 1 && (
-            <View style={styles.imageIndicator}>
-              {availableImages.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicatorDot,
-                    index === currentImageIndex && styles.activeDot
-                  ]}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Tap instruction for multiple images */}
-          {availableImages.length > 1 && (
-            <View style={styles.tapInstruction}>
-              <Text style={styles.tapInstructionText}>Tap to cycle images</Text>
-            </View>
-          )}
-
           <GradientView
             colors={['transparent', 'rgb(0, 0, 0)', 'rgb(0, 0, 0)']}
             style={styles.gradient}
