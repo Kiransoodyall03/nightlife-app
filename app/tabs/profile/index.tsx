@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, ScrollView, Animated } from 'react-native';
+import Slider from '@react-native-community/slider';
 import styles from './styles';
 import { useUser } from '../../../src/context/UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -55,13 +56,16 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
   const { user, userData, locationData, signOut, updateLocation, pickImage, updateSearchRadius, updateUsername } = useUser();
   const { loading: authLoading, error: authError } = useAuth();
   const [newUsername, setNewUsername] = useState(userData?.username || '');
-  const [newSearchRadius, setNewSearchRadius] = useState(userData?.searchRadius?.toString() || '5');
+  const [searchRadius, setSearchRadius] = useState(userData?.searchRadius || 5);
   const [editingUsername, setEditingUsername] = useState(false);
-  const [editingRadius, setEditingRadius] = useState(false);
-  const [locationEnabled, setLocationEnabled] = useState(!!locationData?.address);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { showSuccess, showError } = useNotification();
+
+  // New state for additional settings
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [removeAdsEnabled, setRemoveAdsEnabled] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -73,7 +77,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
         if (userDoc.exists()) {
           const data = userDoc.data() as UserData;
           setNewUsername(data?.username || '');
-          setNewSearchRadius(data?.searchRadius?.toString() || '5');
+          setSearchRadius(data?.searchRadius || 5);
         }
       } catch (err) {
         setError('Failed to load profile data');
@@ -95,10 +99,6 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     }
   };
 
-  const NavigateToFilters = async () => {
-    navigation.navigate('Filter')
-  }
-
   const handleUpdateUsername = async () => {
     try {
       if (!user) throw new Error('Not authenticated');
@@ -115,27 +115,37 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     }
   };
 
-  const handleUpdateSearchRadius = async () => {
+  const handleSearchRadiusChange = async (value: number) => {
+    setSearchRadius(value);
     try {
-      const radius = parseInt(newSearchRadius);
-      if (isNaN(radius) || radius < 1 || radius > 100) {
-        showError('Search radius must be between 1-100 km');
-        return;
-      }
-      
-      await updateSearchRadius(radius);
-      showSuccess("Successfully updated search radius");
-      setEditingRadius(false);
+      await updateSearchRadius(value);
     } catch (error) {
       showError('Failed to update search radius');
     }
   };
 
-  const toggleLocationServices = () => {
-    setLocationEnabled(!locationEnabled);
-    if (!locationEnabled) {
-      updateLocation();
-    }
+  // Empty functions for new toggles
+  const handleNotificationsToggle = () => {
+    setNotificationsEnabled(!notificationsEnabled);
+    // TODO: Add notifications functionality
+  };
+
+  const handleDarkModeToggle = () => {
+    setDarkModeEnabled(!darkModeEnabled);
+    // TODO: Add dark mode functionality
+  };
+
+  const handleRemoveAdsToggle = () => {
+    setRemoveAdsEnabled(!removeAdsEnabled);
+    // TODO: Add remove ads functionality
+  };
+
+  const handlePasswordEdit = () => {
+    // TODO: Navigate to password change screen
+  };
+
+  const handleDeleteAccount = () => {
+    // TODO: Add delete account functionality
   };
 
   if (loading || authLoading) {
@@ -163,10 +173,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
       showsVerticalScrollIndicator={false}
     >
       {/* Background Header */}
-      <Image 
-        source={require('../../../assets/background-art/background_profile.jpeg')}
-        style={styles.backgroundHeader}
-      />
+      <View style={styles.backgroundHeader} />
 
       {/* Profile Image Container */}
       <View style={styles.profileImageContainer}>
@@ -183,32 +190,30 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
           </View>
         )}
         <TouchableOpacity style={styles.editImageButton} onPress={pickImage}>
-          <Feather name="edit-2" size={18} color="#007AFF" />
+          <Feather name="edit-2" size={16} color="#007AFF" />
         </TouchableOpacity>
       </View>
 
       {/* Profile Information Section */}
       <View style={styles.profileSection}>
-        <View style={styles.inlineEditContainer}>
+        <View style={styles.nameContainer}>
           {editingUsername ? (
-            <>
+            <View style={styles.editNameContainer}>
               <TextInput
-                style={styles.editInput}
+                style={styles.nameInput}
                 value={newUsername}
                 onChangeText={setNewUsername}
                 autoFocus
+                onBlur={handleUpdateUsername}
               />
-              <TouchableOpacity onPress={handleUpdateUsername}>
-                <Feather name="check" size={24} color="#4CAF50" />
-              </TouchableOpacity>
-            </>
+            </View>
           ) : (
-            <>
-              <Text style={styles.name}>{userData?.username}</Text>
-              <TouchableOpacity onPress={() => setEditingUsername(true)}>
-                <Feather name="edit-2" size={20} color="#666" />
+            <View style={styles.nameDisplayContainer}>
+              <Text style={styles.name}>{userData?.username || 'User'}</Text>
+              <TouchableOpacity onPress={() => setEditingUsername(true)} style={styles.editNameButton}>
+                <Feather name="edit-2" size={16} color="#666" />
               </TouchableOpacity>
-            </>
+            </View>
           )}
         </View>
         <Text style={styles.email}>{userData?.email || ''}</Text>
@@ -216,71 +221,64 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
 
       {/* Settings List */}
       <View style={styles.settingsList}>
-        {/* Location Setting */}
-        <View style={styles.settingItem}>
-          <View style={styles.settingContent}>
-            <Text style={styles.settingLabel}>Location: {locationData?.address || 'Not set'}</Text>
-            <TouchableOpacity onPress={updateLocation} disabled={!locationEnabled}>
-              <Feather name="edit-2" size={20} color={locationEnabled ? "#666" : "#ccc"} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.settingAction}>
-            <ToggleButton 
-              value={locationEnabled} 
-              onToggle={toggleLocationServices}
+        {/* Search Area Setting */}
+        <View style={styles.settingCard}>
+          <Text style={styles.settingTitle}>Search Area: {Math.round(searchRadius)}km</Text>
+          <View style={styles.sliderContainer}>
+            <Slider
+              style={styles.slider}
+              minimumValue={1}
+              maximumValue={50}
+              value={searchRadius}
+              onValueChange={setSearchRadius}
+              onSlidingComplete={handleSearchRadiusChange}
+              minimumTrackTintColor="#007AFF"
+              maximumTrackTintColor="#ddd"
             />
           </View>
         </View>
         
-        {/* Search Area Setting */}
-        <View style={styles.settingItem}>
-          {editingRadius ? (
-            <View style={styles.inlineEditContainer}>
-              <Text style={styles.settingLabel}>Search Area: </Text>
-              <TextInput
-                style={styles.smallEditInput}
-                value={newSearchRadius}
-                onChangeText={setNewSearchRadius}
-                keyboardType="numeric"
-                autoFocus
-              />
-              <Text style={styles.settingLabel}>km</Text>
-              <TouchableOpacity onPress={handleUpdateSearchRadius}>
-                <Feather name="check" size={24} color="#4CAF50" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.settingLabel}>Search Area: {userData?.searchRadius || '5'}km</Text>
-              <TouchableOpacity onPress={() => setEditingRadius(true)}>
-                <Feather name="edit-2" size={20} color="#666" />
-              </TouchableOpacity>
-            </>
-          )}
+        {/* Enable Notifications Setting */}
+        <View style={styles.settingCard}>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Enable Notifications:</Text>
+            <ToggleButton 
+              value={notificationsEnabled} 
+              onToggle={handleNotificationsToggle}
+            />
+          </View>
         </View>
 
-        {/* Filter Setting */}
-        <View style={styles.settingItem}>
-          <Text style={styles.settingLabel}>Filters</Text>
-          <TouchableOpacity onPress={NavigateToFilters}>
-            <Feather name="edit-2" size={20} color="#666" />
-          </TouchableOpacity>
+        {/* Dark Mode Setting */}
+        <View style={styles.settingCard}>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Dark mode:</Text>
+            <ToggleButton 
+              value={darkModeEnabled} 
+              onToggle={handleDarkModeToggle}
+            />
+          </View>
+        </View>
+
+        {/* Remove Advertisements Setting */}
+        <View style={styles.settingCard}>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Remove Advertisements:</Text>
+            <ToggleButton 
+              value={removeAdsEnabled} 
+              onToggle={handleRemoveAdsToggle}
+            />
+          </View>
         </View>
         
         {/* Password Setting */}
-        <View style={styles.settingItem}>
-          <Text style={styles.settingLabel}>Password: ••••••••••</Text>
-          <TouchableOpacity>
-            <Feather name="edit-2" size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Empty Settings (placeholder for future settings) */}
-        <View style={styles.settingItem}>
-          <Text style={styles.settingLabel}></Text>
-          <TouchableOpacity>
-            <Feather name="edit-2" size={20} color="#666" />
-          </TouchableOpacity>
+        <View style={styles.settingCard}>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Password: ••••••••••</Text>
+            <TouchableOpacity onPress={handlePasswordEdit}>
+              <Feather name="edit-2" size={16} color="#666" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -290,7 +288,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
           <Text style={styles.logoutButtonText}>Log-out</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.deleteButton}>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
           <Text style={styles.deleteButtonText}>Delete Account</Text>
         </TouchableOpacity>
       </View>

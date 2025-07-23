@@ -1,6 +1,6 @@
 // src/context/UserContext.tsx
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Appearance, AppState } from 'react-native';
 import {
   User,
   onAuthStateChanged,
@@ -26,8 +26,7 @@ import { getStorage } from 'firebase/storage';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import * as SecureStore from 'expo-secure-store';
-import jwtDecode from 'jwt-decode';
-
+import { ThemeColors, ThemeMode, DarkTheme,LightTheme, ColorHelpers } from 'src/styles/colors';
 // API & Storage Constants
 const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
@@ -42,6 +41,7 @@ const LOCATION_SERVICES_KEY = 'NL_enableLocation';
 const GOOGLE_TOKEN_KEY = 'NL_googleId';
 const LOCATION_CACHE_KEY = 'NL_location_cache';
 const USER_DATA_CACHE_KEY = 'NL_user_data_cache';
+const THEME_PREFERENCE_KEY = 'NL_theme_preference';
 const LOCATION_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 // Platform detection
@@ -75,6 +75,11 @@ interface EnhancedUserContext extends BaseUserContext {
     location: { address: string; latitude: number; longitude: number } 
   }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  themeMode: ThemeMode;
+  isDarkMode: boolean;
+  colors: ThemeColors;
+  setThemeMode: (mode: ThemeMode) => Promise<void>;
+  toggleTheme: () => Promise<void>;
 }
 
 const UserContextInstance = createContext<EnhancedUserContext>({} as EnhancedUserContext);
@@ -92,6 +97,77 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [hasMorePlaces, setHasMorePlaces] = useState(true);
   const [cooldown, setCooldown] = useState(false);
   const tokenRefreshTimer = useRef<NodeJS.Timeout | null>(null);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('auto');
+  const [systemColorScheme, setSystemColorScheme] = useState<'light' | 'dark'>('light');
+  const isDarkMode = React.useMemo(() => {
+      switch (themeMode) {
+        case 'dark':
+          return true;
+        case 'light':
+          return false;
+        case 'auto':
+          return systemColorScheme === 'dark';
+        default:
+          return false;
+      }
+    }, [themeMode, systemColorScheme]);
+
+    const colors = React.useMemo(() => {
+      return ColorHelpers.getTheme(isDarkMode);
+    }, [isDarkMode]);
+
+    // Theme Management Functions
+    const setThemeMode = async (mode: ThemeMode) => {
+      setThemeModeState(mode);
+      try {
+        await SecureStorage.setItemAsync(THEME_PREFERENCE_KEY, mode);
+      } catch (error) {
+        console.error('Error saving theme preference:', error);
+      }
+    };
+
+    const toggleTheme = async () => {
+      const newMode = isDarkMode ? 'light' : 'dark';
+      await setThemeMode(newMode);
+    };
+
+    // Load theme preference on startup
+    const loadThemePreference = async () => {
+      try {
+        const savedTheme = await SecureStorage.getItemAsync(THEME_PREFERENCE_KEY);
+        if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
+          setThemeModeState(savedTheme as ThemeMode);
+        }
+      } catch (error) {
+        console.error('Error loading theme preference:', error);
+      }
+    };
+
+    // System theme detection
+    const updateSystemColorScheme = () => {
+      if (isWeb) {
+        // Web detection
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        setSystemColorScheme(mediaQuery.matches ? 'dark' : 'light');
+        
+        const handleChange = (e: MediaQueryListEvent) => {
+          setSystemColorScheme(e.matches ? 'dark' : 'light');
+        };
+        
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        // React Native detection
+        const colorScheme = Appearance.getColorScheme();
+        setSystemColorScheme(colorScheme === 'dark' ? 'dark' : 'light');
+        
+        const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+          setSystemColorScheme(colorScheme === 'dark' ? 'dark' : 'light');
+        });
+        
+        return () => subscription.remove();
+      }
+    };
 
   // ─── Session Token Management ─────────────────────────────────────
   const saveSessionToken = async (token: string, expiry?: number) => {
@@ -731,6 +807,24 @@ const fetchNearbyPlaces = async (
   };
 
   // ─── Effects ────────────────────────────────────────────────────
+    useEffect(() => {
+    // Load theme preference and set up system theme detection
+    const initializeTheme = async () => {
+      await loadThemePreference();
+      const cleanup = updateSystemColorScheme();
+      return cleanup;
+    };
+    
+    let cleanup: (() => void) | undefined;
+    initializeTheme().then((cleanupFn) => {
+      cleanup = cleanupFn;
+    });
+    
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, []);
+  
   useEffect(() => {
     // Load location services preference
     const loadPreferences = async () => {
@@ -841,6 +935,11 @@ const fetchNearbyPlaces = async (
         nextPageToken,
         placesLoading,
         hasMorePlaces,
+        themeMode,
+        isDarkMode,
+        colors,
+        setThemeMode,
+        toggleTheme,
       }}
     >
       {children}
