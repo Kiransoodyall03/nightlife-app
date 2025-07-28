@@ -1,78 +1,85 @@
 import { StyleSheet, Dimensions } from 'react-native';
+
 const { width, height } = Dimensions.get('window');
 const TopHeading = height * 0.15;
 
-const styles = StyleSheet.create({
+export default StyleSheet.create({
   container: {
     flex: 1,
-    // justifyContent: 'center', 
-    // alignItems: 'center', 
-  },
-  dashboard: {
-    height: 60, 
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    height: TopHeading,
-    width: '90%',
-    backgroundColor: '#ddd', 
-    borderRadius: 10,
-  },
-  cardsContainer: {
-    flex: 1, 
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  navbar: {
-    height: TopHeading,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footer: {
-    width: '90%',
-    backgroundColor: '#ddd',
-    borderRadius: 10,
-  },
-  swiper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  LoadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    bottom: 20,
-    width: '100%',
-    alignItems: 'center'
+    backgroundColor: '#f8f9fa',
   },
   dropdownContainer: {
-    position: 'absolute',
-    top: 0, // Adjust based on your status bar height
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: -2,
-    zIndex: 1000, // Ensure it's above the cards
+    padding: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5, // For Android shadow
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 10,
   },
-    dropdownButton: {
+  cardsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d9534f',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  infoText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#5a5a5a',
+  },
+  filterText: {
+    marginTop: 5,
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  actionContainer: {
+    marginTop: 20,
+    width: '80%',
+  },
+  swiper: {
+    flex: 1,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 15,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  actionButton: {
+    marginHorizontal: 10,
+    minWidth: 120,
+  },
+  dropdownButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#dee2e6',
@@ -86,12 +93,37 @@ const styles = StyleSheet.create({
     elevation: 3,
     minHeight: 48,
   },
-    dropdownButtonText: {
+  dropdownButtonText: {
     fontSize: 16,
     color: '#495057',
     fontWeight: '500',
   },
-
+  overlayLabelLeft: {
+    backgroundColor: '#ef4444',
+    borderColor: '#ef4444',
+    color: '#fff',
+    borderWidth: 1,
+    fontSize: 24,
+  },
+  overlayLabelRight: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+    color: '#fff',
+    borderWidth: 1,
+    fontSize: 24,
+  },
+  overlayWrapperLeft: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    marginTop: 30,
+    marginLeft: -30,
+  },
+  overlayWrapperRight: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    marginTop: 30,
+    marginLeft: 30,
+  },
 });
-
-export default styles;

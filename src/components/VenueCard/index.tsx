@@ -1,16 +1,17 @@
-// VenueCard.tsx - Fixed image cycling functionality
 import React, { useState, useEffect } from 'react';
-import { View, Text, ImageBackground, TouchableOpacity, Pressable } from 'react-native';
-import { X, RotateCw, Heart } from 'lucide-react-native';
-import Button from '../Button';
-import GradientView from '@assets/Gradient/GradientView';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Heart, X, RefreshCw, MapPin, Star } from 'lucide-react-native';
 import styles from './styles';
+const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.9;
+const CARD_HEIGHT = height * 0.75;
 
 export interface Venue {
   id: string;
   name: string;
   image: string;
-  images?: string[]; // Array of additional images
+  images?: string[];
   description: string;
   type: string;
   rating: number;
@@ -19,7 +20,7 @@ export interface Venue {
 }
 
 interface VenueCardProps {
-  venue: Venue;
+  venue?: Venue;
   onLike: () => void;
   onDislike: () => void;
   onRewind: () => void;
@@ -33,123 +34,142 @@ export default function VenueCard({
   onRewind,
   selectedGroupName,
 }: VenueCardProps) {
-  // State to track current image index
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [fadeAnim] = useState(new Animated.Value(1));
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
-  // Create array of available images (main image + additional images, max 3)
-  const availableImages = React.useMemo(() => {
-    const images = [venue.image];
-    if (venue.images && venue.images.length > 0) {
-      images.push(...venue.images);
-    }
-    return images.slice(0, 3).filter(img => img && img.trim() !== ''); // Filter out empty/null images
-  }, [venue.image, venue.images]);
+  const handleSwipe = (direction: 'left' | 'right') => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      direction === 'right' ? onLike() : onDislike();
+    });
+  };
 
-  // Reset image index when venue changes
-  useEffect(() => {
-    setCurrentImageIndex(0);
-  }, [venue.id]);
-
-  // Handle image cycling with better debugging
-  const handleImageClick = () => {
-    console.log('Image clicked!'); // Debug log
-    console.log('Available images:', availableImages.length); // Debug log
-    
-    if (availableImages.length > 1) {
-      setCurrentImageIndex((prevIndex) => {
-        const nextIndex = prevIndex === availableImages.length - 1 ? 0 : prevIndex + 1;
-        console.log(`Image index changed from ${prevIndex} to ${nextIndex}`); // Debug log
-        return nextIndex;
-      });
+  const nextImage = () => {
+    if (venue?.images && venue.images.length > 0) {
+      setImageIndex((imageIndex + 1) % (venue.images.length + 1));
     }
   };
 
-  // Get current image to display
-  const currentImage = availableImages[currentImageIndex] || venue.image;
+  // Return placeholder if venue is undefined
+  if (!venue) {
+    return (
+      <View style={[styles.card, styles.placeholderCard]}>
+        <Text style={styles.placeholderText}>Loading venue...</Text>
+      </View>
+    );
+  }
 
-  // Process tags
-  const tags = venue.tags || 
-    venue.type
-      .split(', ')
-      .map(typeStr => typeStr.replace(/_/g, ' '))
-      .filter(typeStr => !["point_of_interest", "point of interest", "establishment", "shopping mall", "atm", "finance", "store"].includes(typeStr))
-      .slice(0, 3);
-  
+  const currentImage = imageIndex === 0 
+    ? venue.image 
+    : venue.images?.[imageIndex - 1];
+
   return (
-    <View style={styles.card}>
-      <Pressable 
-        style={{ flex: 1 }}
-        android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
+    <Animated.View style={[
+      styles.card, 
+      { opacity: fadeAnim, transform: [{ scale: fadeAnim }] }
+    ]}>
+      {/* Full Card Image Background */}
+      <TouchableOpacity 
+        activeOpacity={0.9} 
+        style={styles.imageContainer}
+        onPress={nextImage}
       >
-        <ImageBackground 
-          source={{ uri: currentImage }} 
-          style={styles.image} 
-          resizeMode="cover"
-        >
-          <GradientView
-            colors={['transparent', 'rgb(0, 0, 0)', 'rgb(0, 0, 0)']}
-            style={styles.gradient}
-          >
-            <View style={styles.infoContainer}>
-              <Text style={styles.name}>{venue.name}</Text>
-              
-              <View style={styles.tagsContainer}>
-                {tags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.ratingDistanceContainer}>
-                <Text style={styles.rating}>{venue.rating.toFixed(1)} ★</Text>
-                {venue.distance && <Text style={styles.distance}>{venue.distance}</Text>}
-              </View>
-              
-              {/* Action buttons with better touch handling */}
-              <View style={styles.actionButtons}>
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation(); // Prevent image cycling when button is pressed
-                    onDislike();
-                  }}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    { backgroundColor: pressed ? '#FF6B60' : '#FF3B30' }
-                  ]}
-                >
-                  <X color="#FFF" size={24} />
-                </Pressable>
-                
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation(); // Prevent image cycling when button is pressed
-                    onRewind();
-                  }}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    { backgroundColor: pressed ? '#FFD633' : '#FFCC00' }
-                  ]}
-                >
-                  <RotateCw color="#000" size={24} />
-                </Pressable>
-                
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation(); // Prevent image cycling when button is pressed
-                    onLike();
-                  }}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    { backgroundColor: pressed ? '#4CD964' : '#34C759' }
-                  ]}
-                >
-                  <Heart color="#FFF" size={24} />
-                </Pressable>
-              </View>
+        {currentImage ? (
+          <Image 
+            source={{ uri: currentImage }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.image, styles.imagePlaceholder]}>
+            <Text style={styles.placeholderText}>No Image Available</Text>
+          </View>
+        )}
+        
+        {/* Gradient Overlay for bottom content */}
+        <LinearGradient
+          colors={['transparent', 'transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
+          locations={[0, 0.4, 0.7, 1]}
+          style={styles.gradientOverlay}
+        />
+        
+        {/* Image Indicator */}
+        {venue.images && venue.images.length > 0 && (
+          <View style={styles.imageIndicator}>
+            <Text style={styles.imageIndicatorText}>
+              {imageIndex + 1}/{venue.images.length + 1}
+            </Text>
+          </View>
+        )}
+
+        {/* Venue Info Overlay */}
+        <View style={styles.infoContainer}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {venue.name || 'Unnamed Venue'}
+            </Text>
+            <Text style={styles.age}>
+              {venue.rating ? `${venue.rating.toFixed(1)} ★` : 'N/A'}
+            </Text>
+          </View>
+          
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <MapPin size={16} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.detailText} numberOfLines={1}>
+                {venue.distance || 'Unknown distance'}
+              </Text>
             </View>
-          </GradientView>
-        </ImageBackground>
-      </Pressable>
-    </View>
+            
+            <View style={styles.detailItem}>
+              <Star size={16} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.detailText} numberOfLines={1}>
+                {venue.type || 'Venue'}
+              </Text>
+            </View>
+          </View>
+          
+          <Text style={styles.description} numberOfLines={2}>
+            {venue.description || 'No description available'}
+          </Text>
+          
+          {selectedGroupName && (
+            <View style={styles.groupTag}>
+              <Text style={styles.groupTagText}>
+                For {selectedGroupName}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Action Buttons Overlay */}
+        <View style={styles.actionBar}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.dislikeButton]}
+            onPress={() => handleSwipe('left')}
+          >
+            <X size={28} color="#FF3B30" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.rewindButton]}
+            onPress={onRewind}
+          >
+            <RefreshCw size={24} color="#FF9500" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.likeButton]}
+            onPress={() => handleSwipe('right')}
+          >
+            <Heart size={28} color="#34C759" fill="#34C759" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }

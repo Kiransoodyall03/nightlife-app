@@ -287,4 +287,19 @@ export default StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // Add these to your existing styles
+settingLabelContainer: {
+  flex: 1,
+},
+settingSubtext: {
+  fontSize: 12,
+  color: '#666',
+  marginTop: 2,
+},
+toggleWithLoading: {
+  width: 50,
+  height: 30,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
 });

@@ -5,6 +5,9 @@
     "baseUrl": ".",
     "paths": {
       "@assets/*": ["assets/*"]
-    }
+    },
+    "module": "esnext",       // or "es2022", "es2020", etc.
+    "target": "esnext",       // to match the module system
+    "moduleResolution": "node"
   }
 }

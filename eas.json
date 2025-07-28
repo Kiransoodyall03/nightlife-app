@@ -9,10 +9,40 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAdNMppJlGTJt9eJZDE_yG-ZJuyFcmjJTU",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "nightlife-app-c4311.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "nightlife-app-c4311",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "nightlife-app-c4311.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "461689495108",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:461689495108:android:a99f2af7120f9621746611",
+        "EXPO_PUBLIC_GOOGLE_API_KEY": "AIzaSyDjyEKv-jkRY1PCMV2yj5Zt_nBlCr7UJag",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "461689495108-tvldvacun0dngu2m1m7okmbvji7lga83.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "461689495108-tvldvacun0dngu2m1m7okmbvji7lga83.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "461689495108-4nesd4ojgohjhjbmaj70m2p9na494cvd.apps.googleusercontent.com"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAdNMppJlGTJt9eJZDE_yG-ZJuyFcmjJTU",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "nightlife-app-c4311.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "nightlife-app-c4311",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "nightlife-app-c4311.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "461689495108",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:461689495108:android:a99f2af7120f9621746611",
+        "EXPO_PUBLIC_GOOGLE_API_KEY": "AIzaSyDjyEKv-jkRY1PCMV2yj5Zt_nBlCr7UJag",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "461689495108-tvldvacun0dngu2m1m7okmbvji7lga83.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "461689495108-tvldvacun0dngu2m1m7okmbvji7lga83.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "461689495108-4nesd4ojgohjhjbmaj70m2p9na494cvd.apps.googleusercontent.com"
+      }
     }
   },
   "submit": {

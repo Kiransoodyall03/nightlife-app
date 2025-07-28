@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, ScrollView, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, ScrollView, Animated, Alert } from 'react-native';
 import Slider from '@react-native-community/slider';
+import * as Location from 'expo-location';
 import styles from './styles';
 import { useUser } from '../../../src/context/UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -62,10 +63,15 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
   const [error, setError] = useState('');
   const { showSuccess, showError } = useNotification();
 
-  // New state for additional settings
+  // Existing state for settings
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [removeAdsEnabled, setRemoveAdsEnabled] = useState(false);
+  
+  // New state for location services
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [locationPermissionStatus, setLocationPermissionStatus] = useState<string>('undetermined');
+  const [checkingLocation, setCheckingLocation] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -89,6 +95,114 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     setLoading(true);
     fetchUserData();
   }, [user]);
+
+  // Check location permission status on component mount
+  useEffect(() => {
+    checkLocationPermission();
+  }, []);
+
+  const checkLocationPermission = async () => {
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      setLocationPermissionStatus(status);
+      setLocationEnabled(status === 'granted');
+      
+      // If permission is granted, check if we have current location data
+      if (status === 'granted' && !locationData) {
+        await requestLocation();
+      }
+    } catch (error) {
+      console.log('Error checking location permission:', error);
+    }
+  };
+
+  const requestLocation = async () => {
+    try {
+      setCheckingLocation(true);
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      
+      const locationData = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        timestamp: Date.now(),
+      };
+      
+      await updateLocation();
+      showSuccess('Location updated successfully');
+    } catch (error) {
+      console.log('Error getting location:', error);
+      showError('Failed to get current location');
+    } finally {
+      setCheckingLocation(false);
+    }
+  };
+
+  const handleLocationToggle = async () => {
+    try {
+      if (locationEnabled) {
+        // User wants to disable location - show confirmation
+        Alert.alert(
+          'Disable Location Services',
+          'This will prevent the app from finding venues near you. You can re-enable it anytime in settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Disable', 
+              style: 'destructive',
+              onPress: () => {
+                setLocationEnabled(false);
+                showSuccess('Location services disabled');
+              }
+            }
+          ]
+        );
+      } else {
+        // User wants to enable location
+        setCheckingLocation(true);
+        
+        if (locationPermissionStatus === 'denied') {
+          // Permission was previously denied, guide user to settings
+          Alert.alert(
+            'Location Permission Required',
+            'Location permission was previously denied. Please enable it in your device settings to use location-based features.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Open Settings', 
+                onPress: () => {
+                  // Note: You might want to use Linking to open device settings
+                  // import { Linking } from 'react-native';
+                  // Linking.openSettings();
+                }
+              }
+            ]
+          );
+          setCheckingLocation(false);
+          return;
+        }
+
+        // Request permission
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        setLocationPermissionStatus(status);
+        
+        if (status === 'granted') {
+          setLocationEnabled(true);
+          await requestLocation();
+        } else {
+          showError('Location permission is required to discover nearby venues');
+          setLocationEnabled(false);
+        }
+        
+        setCheckingLocation(false);
+      }
+    } catch (error) {
+      console.log('Error handling location toggle:', error);
+      showError('Failed to update location settings');
+      setCheckingLocation(false);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -124,7 +238,7 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
     }
   };
 
-  // Empty functions for new toggles
+  // Empty functions for other toggles
   const handleNotificationsToggle = () => {
     setNotificationsEnabled(!notificationsEnabled);
     // TODO: Add notifications functionality
@@ -146,6 +260,15 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
 
   const handleDeleteAccount = () => {
     // TODO: Add delete account functionality
+  };
+
+  const getLocationStatusText = () => {
+    if (checkingLocation) return 'Checking location...';
+    if (locationEnabled && locationData) {
+      return `Location enabled (Last updated: ${new Date(locationData.timestamp || 0).toLocaleTimeString()})`;
+    }
+    if (locationEnabled) return 'Location enabled';
+    return 'Location disabled';
   };
 
   if (loading || authLoading) {
@@ -221,6 +344,27 @@ const Profile = ({navigation}: {navigation: NavigationProp<any>}) => {
 
       {/* Settings List */}
       <View style={styles.settingsList}>
+        {/* Location Services Setting - NEW */}
+        <View style={styles.settingCard}>
+          <View style={styles.settingRow}>
+            <View style={styles.settingLabelContainer}>
+              <Text style={styles.settingLabel}>Location Services:</Text>
+              <Text style={styles.settingSubtext}>{getLocationStatusText()}</Text>
+            </View>
+            <View style={styles.toggleWithLoading}>
+              {checkingLocation ? (
+                <ActivityIndicator size="small" color="#007AFF" />
+              ) : (
+                <ToggleButton 
+                  value={locationEnabled} 
+                  onToggle={handleLocationToggle}
+                  disabled={checkingLocation}
+                />
+              )}
+            </View>
+          </View>
+        </View>
+
         {/* Search Area Setting */}
         <View style={styles.settingCard}>
           <Text style={styles.settingTitle}>Search Area: {Math.round(searchRadius)}km</Text>

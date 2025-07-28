@@ -21,6 +21,7 @@ import { useUser } from '../../../src/context/UserContext';
 import { useNotification } from 'src/components/Notification/NotificationContext';
 import { LoginScreenNavigationProp } from '../../../types/navigation';
 import { validateEmail } from '../../../src/services/auth/validation';
+import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -34,9 +35,9 @@ export default function LoginScreen() {
 
   // Expo Google Auth hook
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    iosClientId:     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    webClientId:     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    androidClientId: Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId:     Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    webClientId:     Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 
   useEffect(() => {
