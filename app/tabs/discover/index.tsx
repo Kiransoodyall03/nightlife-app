@@ -35,7 +35,7 @@ export default function DiscoverScreen() {
   const [selectedGroupFilters, setSelectedGroupFilters] = useState<string[]>([]);
   
   // API key
-  const GOOGLE_API_KEY = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_API_KEY;
+  const GOOGLE_API_KEY = Constants.expoConfig?.extra?.googleApiKey;
   
   // Track existing venue IDs to prevent duplicates
   const venueIdsRef = useRef(new Set<string>());
