@@ -35,9 +35,9 @@ export default function LoginScreen() {
 
   // Expo Google Auth hook
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId,
+    androidClientId: process.env.googleAndroidClientId || Constants.expoConfig?.extra?.googleAndroidClientId,
     iosClientId:     Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    webClientId:     Constants.expoConfig?.extra?.googleWebClientId,
+    webClientId:     process.env.googleWebClientId || Constants.expoConfig?.extra?.googleWebClientId,
   });
 
   useEffect(() => {

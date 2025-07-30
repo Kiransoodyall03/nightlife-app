@@ -35,7 +35,7 @@ export default function DiscoverScreen() {
   const [selectedGroupFilters, setSelectedGroupFilters] = useState<string[]>([]);
   
   // API key
-  const GOOGLE_API_KEY = Constants.expoConfig?.extra?.googleApiKey;
+  const GOOGLE_API_KEY = process.env.googleApiKey || Constants.expoConfig?.extra?.googleApiKey;
   
   // Track existing venue IDs to prevent duplicates
   const venueIdsRef = useRef(new Set<string>());
@@ -695,7 +695,7 @@ export default function DiscoverScreen() {
           onSwipedAll={handleSwipedAll}
           infinite={false}
           backgroundColor={'transparent'}
-          stackSize={4}
+          stackSize={10}
           stackScale={10}
           stackSeparation={14}
           animateOverlayLabelsOpacity
