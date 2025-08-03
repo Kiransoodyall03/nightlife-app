@@ -28,20 +28,33 @@ export default function DiscoverScreen() {
   const [userFilters, setUserFilters] = useState<string[]>([]);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [hasError, setHasError] = useState(false);
-  
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [visibleVenues, setVisibleVenues] = useState<Venue[]>([]);
   // Group selection state
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [selectedGroupName, setSelectedGroupName] = useState<string>('Personal Preferences');
   const [selectedGroupFilters, setSelectedGroupFilters] = useState<string[]>([]);
-  
-  // API key
-  const GOOGLE_API_KEY = process.env.googleApiKey || Constants.expoConfig?.extra?.googleApiKey;
-  
+const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "AIzaSyDjyEKv-jkRY1PCMV2yj5Zt_nBlCr7UJag";
+if (!GOOGLE_API_KEY) {
+  console.error('❌ Google API Key is missing!');
+  console.error('EXPO_PUBLIC_GOOGLE_API_KEY:', process.env.EXPO_PUBLIC_GOOGLE_API_KEY);
+  console.error('Constants googleApiKey:', Constants.expoConfig?.extra?.googleApiKey);
+} else {
+  console.log('✅ Google API Key loaded successfully');
+}
   // Track existing venue IDs to prevent duplicates
   const venueIdsRef = useRef(new Set<string>());
   const prevActiveFilters = useRef<string[]>([]);
   const lastRefreshTime = useRef<number>(0);
   const isLoadingRef = useRef(false);
+  const STACK_SIZE = 5; // Only render 5 cards at a time
+  const PRELOAD_BUFFER = 2; 
+console.log('Environment Debug:');
+
+console.log('- Has .env EXPO_PUBLIC_GOOGLE_API_KEY:', !!process.env.EXPO_PUBLIC_GOOGLE_API_KEY);
+console.log('- Has Constants googleApiKey:', !!Constants.expoConfig?.extra?.googleApiKey);
+console.log('- __DEV__:', __DEV__);
+console.log('- All EXPO_PUBLIC vars:', Object.keys(process.env).filter(k => k.startsWith('EXPO_PUBLIC_')));
 
   // Active filters computation with error handling
   const activeFilters = useMemo(() => {
@@ -53,7 +66,16 @@ export default function DiscoverScreen() {
       return ['bar', 'restaurant', 'cafe', 'night_club'];
     }
   }, [selectedGroupId, selectedGroupFilters, userFilters]);
-
+  useEffect(() => {
+    if (venues.length > 0) {
+      const startIndex = Math.max(0, currentCardIndex);
+      const endIndex = Math.min(venues.length, startIndex + STACK_SIZE + PRELOAD_BUFFER);
+      const newVisibleVenues = venues.slice(startIndex, endIndex);
+      
+      setVisibleVenues(newVisibleVenues);
+      console.log(`📱 Displaying cards ${startIndex} to ${endIndex-1} of ${venues.length} total`);
+    }
+  }, [venues, currentCardIndex]);
   // Handle group selection from dropdown with error handling
   const handleGroupSelect = useCallback((selection: { groupId: string; groupName: string; groupFilters: string[]}) => {
     try {
@@ -119,7 +141,7 @@ export default function DiscoverScreen() {
           
           const mainImage = place.photos?.[0]?.photo_reference && GOOGLE_API_KEY
             ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
-            : 'https://picsum.photos/400/600';
+            : null;
 
           const additionalImages = place.photos?.slice(1, 3)?.map(photo => 
             photo?.photo_reference && GOOGLE_API_KEY
@@ -198,7 +220,11 @@ export default function DiscoverScreen() {
       }
       
       const response = await fetchNearbyPlaces({ types: validatedFilters });
-      
+          console.log('🔍 DEBUGGING RAW API RESPONSE:');
+    console.log('📊 Response status:', response?.status);
+    console.log('📊 Results count:', response?.results?.length);
+    console.log('📊 First result:', JSON.stringify(response?.results?.[0], null, 2));
+    
       if (!response || !Array.isArray(response.results)) {
         throw new Error('Invalid response from fetchNearbyPlaces');
       }
@@ -208,7 +234,10 @@ export default function DiscoverScreen() {
         setVenues([]);
       } else {
         const transformedVenues = transformPlacesToVenues(response.results);
-        
+              console.log('🔍 DEBUGGING TRANSFORMED VENUES:');
+      console.log('📊 Transformed count:', transformedVenues.length);
+      console.log('📊 First transformed venue:', JSON.stringify(transformedVenues[0], null, 2));
+      
         if (transformedVenues.length === 0) {
           showError?.('Failed to process venue data. Please try again.');
           setVenues([]);
@@ -238,7 +267,82 @@ export default function DiscoverScreen() {
       isLoadingRef.current = false;
     }
   }, [fetchNearbyPlaces, activeFilters, showSuccess, showError, locationData, transformPlacesToVenues, validateFilters]);
+const staticloadInitialData = useCallback(async () => {
+  if (isLoadingRef.current || !locationData) {
+    return;
+  }
 
+  try {
+    isLoadingRef.current = true;
+    setHasError(false);
+    setIsLoading(true);
+    
+    // Clear existing venues
+    setVenues([]);
+    venueIdsRef.current.clear();
+    
+    console.log('🧪 Loading STATIC test venues...');
+    
+    // Create completely static test data - NO API calls, NO images
+    const staticTestVenues: Venue[] = [
+      {
+        id: 'test_venue_1',
+        name: 'Test Restaurant 1',
+        image: null, // No images
+        images: [],
+        description: '123 Test Street, Test City',
+        type: 'restaurant',
+        rating: 4.5,
+        distance: '0.5 km'
+      },
+      {
+        id: 'test_venue_2',
+        name: 'Test Bar 2',
+        image: null, // No images
+        images: [],
+        description: '456 Test Avenue, Test City',
+        type: 'bar',
+        rating: 4.2,
+        distance: '0.8 km'
+      },
+      {
+        id: 'test_venue_3',
+        name: 'Test Cafe 3',
+        image: null, // No images
+        images: [],
+        description: '789 Test Road, Test City',
+        type: 'cafe',
+        rating: 4.7,
+        distance: '1.2 km'
+      }
+    ];
+    
+    console.log('📊 Setting static venues:', staticTestVenues.length);
+    
+    // Track IDs
+    staticTestVenues.forEach(venue => {
+      if (venue?.id) {
+        venueIdsRef.current.add(venue.id);
+      }
+    });
+    
+    setVenues(staticTestVenues);
+    setNextPageToken(null); // No pagination for test
+    setInitialLoadDone(true);
+    
+    showSuccess?.(`Loaded ${staticTestVenues.length} test venues!`);
+    
+  } catch (error: unknown) {
+    console.error("Error loading static test venues:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    showError?.(`Failed to load test venues: ${errorMessage}`);
+    setHasError(true);
+    setVenues([]);
+  } finally {
+    setIsLoading(false);
+    isLoadingRef.current = false;
+  }
+}, [showSuccess, showError, locationData]);
   // Load more venues with error handling
   const loadMoreData = useCallback(async () => {
     if (!nextPageToken || isLoadingMore || !fetchNearbyPlaces) {
@@ -302,105 +406,143 @@ export default function DiscoverScreen() {
     }
   }, [nextPageToken, isLoadingMore, fetchNearbyPlaces, activeFilters, showSuccess, showError, transformPlacesToVenues, validateFilters]);
 
-  // Handle swipe right (like) with error handling
-  const handleSwipedRight = useCallback(async (index: number) => {
-    try {
-      if (!Array.isArray(venues) || index < 0 || index >= venues.length) {
-        console.error('Invalid swipe index or venues array:', { index, venuesLength: venues?.length });
-        return;
-      }
-      
-      const venue = venues[index];
-      if (!venue || !venue.id) {
-        console.error('Invalid venue at index:', index);
-        return;
-      }
-      
-      if (selectedGroupId && createLikeWithComprehensiveDebug) {
-        try {
-          const likeData = {
-            likeId: '',
-            groupId: selectedGroupId,
-            userId: userData?.uid || '',
-            locationId: venue.id,
-            locationName: venue.name || 'Unknown Venue',
-            locationAddress: venue.description || '',
-            locationRating: venue.rating || 0,
-            locationPicture: venue.image || '',
-          };
-          
-          const result = await createLikeWithComprehensiveDebug(likeData);
-          
-          if (result?.success) {
-            showSuccess?.(`${venue.name} added to ${selectedGroupName}!`);
-          } else {
-            showError?.(result?.error?.message || 'Failed to add like');
-          }
-        } catch (error: unknown) {
-          console.error('Error creating like:', error);
-          showError?.('An unexpected error occurred');
+const handleSwipedRight = useCallback(async (index: number) => {
+  try {
+    // Calculate the actual venue index
+    const actualIndex = currentCardIndex + index;
+    
+    if (!Array.isArray(venues) || actualIndex < 0 || actualIndex >= venues.length) {
+      console.error('Invalid swipe index:', { index, actualIndex, venuesLength: venues?.length });
+      return;
+    }
+    
+    const venue = venues[actualIndex];
+    if (!venue || !venue.id) {
+      console.error('Invalid venue at index:', actualIndex);
+      return;
+    }
+    
+    // Your existing like logic here...
+    if (selectedGroupId && createLikeWithComprehensiveDebug) {
+      try {
+        const likeData = {
+          likeId: '',
+          groupId: selectedGroupId,
+          userId: userData?.uid || '',
+          locationId: venue.id,
+          locationName: venue.name || 'Unknown Venue',
+          locationAddress: venue.description || '',
+          locationRating: venue.rating || 0,
+          locationPicture: venue.image || '',
+        };
+        
+        const result = await createLikeWithComprehensiveDebug(likeData);
+        
+        if (result?.success) {
+          showSuccess?.(`${venue.name} added to ${selectedGroupName}!`);
+        } else {
+          showError?.(result?.error?.message || 'Failed to add like');
         }
-      } else {
-        showSuccess?.(`Liked ${venue.name}!`);
+      } catch (error: unknown) {
+        console.error('Error creating like:', error);
+        showError?.('An unexpected error occurred');
       }
-    } catch (error) {
-      console.error('Error in handleSwipedRight:', error);
-      showError?.('Error processing like');
+    } else {
+      showSuccess?.(`Liked ${venue.name}!`);
     }
-  }, [venues, selectedGroupId, createLikeWithComprehensiveDebug, userData?.uid, selectedGroupName, showSuccess, showError]);
+    
+    // Update card index and load more if needed
+    const newIndex = currentCardIndex + 1;
+    setCurrentCardIndex(newIndex);
+    
+    // Load more venues when we're near the end
+    if (newIndex >= venues.length - 3 && nextPageToken && !isLoadingMore) {
+      loadMoreData();
+    }
+    
+  } catch (error) {
+    console.error('Error in handleSwipedRight:', error);
+    showError?.('Error processing like');
+  }
+}, [currentCardIndex, venues, selectedGroupId, createLikeWithComprehensiveDebug, userData?.uid, selectedGroupName, showSuccess, showError, nextPageToken, isLoadingMore, loadMoreData]);
 
-  // Handle swipe left (pass) with error handling
-  const handleSwipedLeft = useCallback((index: number) => {
-    try {
-      if (!Array.isArray(venues) || index < 0 || index >= venues.length) {
-        return;
-      }
+const handleSwipedLeft = useCallback((index: number) => {
+  try {
+    const actualIndex = currentCardIndex + index;
+    
+    if (!Array.isArray(venues) || actualIndex < 0 || actualIndex >= venues.length) {
+      return;
+    }
+    
+    const venue = venues[actualIndex];
+    if (venue?.name) {
+      showSuccess?.(`Passed on ${venue.name}`);
+    }
+    
+    // Update card index and load more if needed
+    const newIndex = currentCardIndex + 1;
+    setCurrentCardIndex(newIndex);
+    
+    // Load more venues when we're near the end
+    if (newIndex >= venues.length - 3 && nextPageToken && !isLoadingMore) {
+      loadMoreData();
+    }
+    
+  } catch (error) {
+    console.error('Error in handleSwipedLeft:', error);
+  }
+}, [currentCardIndex, venues, showSuccess, nextPageToken, isLoadingMore, loadMoreData]);
+
+const handleSwipedAll = useCallback(() => {
+  try {
+    console.log('🔄 All visible cards swiped, loading more...');
+    
+    if (currentCardIndex < venues.length - 1) {
+      // Still have venues, just need to update visible stack
+      const newIndex = currentCardIndex;
+      setCurrentCardIndex(newIndex);
       
-      const venue = venues[index];
-      if (venue?.name) {
-        showSuccess?.(`Passed on ${venue.name}`);
-      }
-    } catch (error) {
-      console.error('Error in handleSwipedLeft:', error);
-    }
-  }, [venues, showSuccess]);
-
-  // Handle all cards swiped with error handling
-  const handleSwipedAll = useCallback(() => {
-    try {
-      if (nextPageToken && loadMoreData) {
-        loadMoreData().then(() => {
-          if (Array.isArray(venues) && venues.length > 0) {
-            setTimeout(() => {
-              if (swiperRef.current && swiperRef.current.jumpToCardIndex) {
-                swiperRef.current.jumpToCardIndex(0);
-              }
-            }, 300);
+      // Reset swiper to first card of new stack
+      setTimeout(() => {
+        if (swiperRef.current && swiperRef.current.jumpToCardIndex) {
+          swiperRef.current.jumpToCardIndex(0);
+        }
+      }, 100);
+    } else if (nextPageToken && loadMoreData) {
+      // Need to load more from API
+      loadMoreData().then(() => {
+        setTimeout(() => {
+          if (swiperRef.current && swiperRef.current.jumpToCardIndex) {
+            swiperRef.current.jumpToCardIndex(0);
           }
-        }).catch(error => {
-          console.error('Error in handleSwipedAll loadMoreData:', error);
-        });
-      } else {
-        showError?.('No more venues in your area');
-      }
-    } catch (error) {
-      console.error('Error in handleSwipedAll:', error);
+        }, 300);
+      }).catch(error => {
+        console.error('Error in handleSwipedAll loadMoreData:', error);
+        showError?.('Failed to load more venues');
+      });
+    } else {
+      showError?.('No more venues in your area');
     }
-  }, [nextPageToken, loadMoreData, showError, venues]);
+  } catch (error) {
+    console.error('Error in handleSwipedAll:', error);
+  }
+}, [currentCardIndex, venues.length, nextPageToken, loadMoreData, showError]);
 
   // Reset and reload venues with error handling
-  const resetAndReloadVenues = useCallback(() => {
-    try {
-      setVenues([]);
-      setNextPageToken(null);
-      venueIdsRef.current.clear();
-      setInitialLoadDone(false);
-      setHasError(false);
-      isLoadingRef.current = false;
-    } catch (error) {
-      console.error('Error resetting venues:', error);
-    }
-  }, []);
+const resetAndReloadVenues = useCallback(() => {
+  try {
+    setVenues([]);
+    setVisibleVenues([]);
+    setCurrentCardIndex(0);
+    setNextPageToken(null);
+    venueIdsRef.current.clear();
+    setInitialLoadDone(false);
+    setHasError(false);
+    isLoadingRef.current = false;
+  } catch (error) {
+    console.error('Error resetting venues:', error);
+  }
+}, []);
 
   // Refresh venues with cooldown and error handling
   const refreshVenues = useCallback(() => {
@@ -527,6 +669,42 @@ export default function DiscoverScreen() {
       console.error('Error in initial data load effect:', error);
     }
   }, [locationData, initialLoadDone, loadInitialData]);
+    const TestVenueCard = ({ venue }: { venue: Venue }) => {
+    console.log('🏪 TestVenueCard rendering:', venue.name);
+    
+    return (
+      <View style={{
+        flex: 1,
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 20,
+        margin: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>
+          {venue.name}
+        </Text>
+        <Text style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
+          {venue.description}
+        </Text>
+        <Text style={{ fontSize: 14, color: '#999', marginBottom: 8 }}>
+          Type: {venue.type}
+        </Text>
+        <Text style={{ fontSize: 14, color: '#999', marginBottom: 8 }}>
+          Rating: {venue.rating}/5
+        </Text>
+        <Text style={{ fontSize: 14, color: '#999' }}>
+          Distance: {venue.distance}
+        </Text>
+      </View>
+    );
+  };
 
   // Error boundary fallback
   if (hasError) {
@@ -689,7 +867,8 @@ export default function DiscoverScreen() {
                 selectedGroupName={selectedGroupName}
               />
             );
-          }}
+            } 
+          }
           onSwipedRight={handleSwipedRight}
           onSwipedLeft={handleSwipedLeft}
           onSwipedAll={handleSwipedAll}

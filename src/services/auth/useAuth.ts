@@ -598,7 +598,7 @@ const createOrUpdateMatch = async (likeData: LikeData, allGroupLikes?: any[]): P
       locationName: likeData.locationName || 'Unknown Location',
       locationAddress: likeData.locationAddress || 'Address not available',
       locationRating: likeData.locationRating || 0,
-      locationPicture: likeData.locationPicture || 'https://picsum.photos/400/600',
+      locationPicture: likeData.locationPicture || null,
       groupId: likeData.groupId,
       userIds: uniqueUserIds,
       matchedUsersCount: uniqueUserIds.length,
@@ -752,7 +752,7 @@ const debugMatchCreation = {
         locationName: existingLikes[0].locationName || 'Test Location',
         locationAddress: 'Test Address',
         locationRating: 4.5,
-        locationPicture: 'https://picsum.photos/400/600',
+        locationPicture: null,
         createdAt: new Date().toISOString()
       };
       
@@ -768,7 +768,7 @@ const debugMatchCreation = {
         locationName: existingLikes[0].locationName || 'Test Location',
         locationAddress: 'Test Address',
         locationRating: 4.5,
-        locationPicture: 'https://picsum.photos/400/600'
+        locationPicture: null,
       } as LikeData);
       
       // Check if match was created

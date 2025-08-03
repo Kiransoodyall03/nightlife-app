@@ -30,7 +30,7 @@ import Constants from 'expo-constants';
 import { ThemeColors, ThemeMode, DarkTheme,LightTheme, ColorHelpers } from 'src/styles/colors';
 // API & Storage Constants
 const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
-const GOOGLE_API_KEY = process.env.googleApiKey || Constants.expoConfig?.extra?.googleApiKey;
+const GOOGLE_API_KEY = "AIzaSyDjyEKv-jkRY1PCMV2yj5Zt_nBlCr7UJag";
 const PLACES_API = 'https://places.googleapis.com/v1/places:searchNearby';
 const storage = getStorage();
 

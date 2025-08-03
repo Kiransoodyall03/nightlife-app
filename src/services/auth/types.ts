@@ -39,7 +39,7 @@ export interface FirebaseAuthError extends Error {
     locationName?: string;
     locationAddress?: string;
     locationRating?: number;
-    locationPicture?: string;
+    locationPicture?: string | null;
   }
 
   export interface FilterData {
@@ -86,7 +86,9 @@ export interface FirebaseAuthError extends Error {
     excludedTypes?: string[];
     types?: string[];
     pageToken?: string | null;
-  }) => Promise<{ results: GooglePlace[]; nextPageToken: string | null }>;
+  }) => Promise<{
+    status: any; results: GooglePlace[]; nextPageToken: string | null 
+}>;
   placesLoading: boolean;
   hasMorePlaces: boolean;
   };

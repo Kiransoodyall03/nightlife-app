@@ -11,7 +11,7 @@
     "orientation": "portrait",
     "icon": "./assets/icons/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -70,32 +70,31 @@
             "useFrameworks": "static"
           },
           "android": {
-            "enableProguardInReleaseBuilds": false
+            "enableProguardInReleaseBuilds": false,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
           }
         }
       ],
       "expo-secure-store"
     ],
     "extra": {
+       "firebaseApiKey": "AIzaSyAdNMppJlGTJt9eJZDE_yG-ZJuyFcmjJTU",
+  "firebaseAuthDomain": "nightlife-app-c4311.firebaseapp.com",
+  "firebaseProjectId": "nightlife-app-c4311",
+  "firebaseStorageBucket": "nightlife-app-c4311.firebasestorage.app",
+  "firebaseMessagingSenderId": "461689495108",
+  "firebaseAppId": "1:461689495108:android:a99f2af7120f9621746611",
       "router": {
         "origin": false
       },
       "eas": {
         "projectId": "6fb1077d-3ab7-49a8-ad24-933448aef0c5"
       },
-      "firebaseApiKey": "AIzaSyAdNMppJlGTJt9eJZDE_yG-ZJuyFcmjJTU",
-      "firebaseAuthDomain": "nightlife-app-c4311.firebaseapp.com",
-      "firebaseProjectId": "nightlife-app-c4311",
-      "firebaseStorageBucket": "nightlife-app-c4311.firebasestorage.app",
-      "firebaseMessagingSenderId": "461689495108",
-      "firebaseAppId": "1:461689495108:android:a99f2af7120f9621746611",
-      "googleApiKey": "AIzaSyDjyEKv-jkRY1PCMV2yj5Zt_nBlCr7UJag",
-      "googleClientId": "461689495108-tvldvacun0dngu2m1m7okmbvji7lga83.apps.googleusercontent.com",
-      "googleWebClientId": "461689495108-tvldvacun0dngu2m1m7okmbvji7lga83.apps.googleusercontent.com",
-      "googleAndroidClientId": "461689495108-4nesd4ojgohjhjbmaj70m2p9na494cvd.apps.googleusercontent.com"
-    },
     "updates": {
       "url": "https://u.expo.dev/6fb1077d-3ab7-49a8-ad24-933448aef0c5"
     }
+  }
   }
 }

@@ -10,8 +10,8 @@ const CARD_HEIGHT = height * 0.75;
 export interface Venue {
   id: string;
   name: string;
-  image: string;
-  images?: string[];
+ image: string | null;
+ images?: string[];
   description: string;
   type: string;
   rating: number;
