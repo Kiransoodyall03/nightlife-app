@@ -518,16 +518,16 @@ const fetchNearbyPlaces = async (
     types?: string[]; 
     pageToken?: string | null 
   }
-): Promise<{ results: GooglePlace[]; nextPageToken: string | null }> => {
+): Promise<{ status: any; results: GooglePlace[]; nextPageToken: string | null }> => {
   if (!locationData || !userData?.searchRadius) {
-    return { results: [], nextPageToken: null };
+    return { status: 'NO_LOCATION', results: [], nextPageToken: null };
   }
   
   setPlacesLoading(true);
   
   try {
     if (cooldown && !options?.pageToken) {
-      return { results: [], nextPageToken: null };
+      return { status: 'COOLDOWN', results: [], nextPageToken: null };
     }
     
     if (!options?.pageToken) {
@@ -535,12 +535,11 @@ const fetchNearbyPlaces = async (
       setTimeout(() => setCooldown(false), 2000);
     }
     
-    // FIX 1: Use correct place types for New Places API
+    // Use correct place types for New Places API
     let includedTypes = options?.types || ['restaurant', 'cafe', 'bar'];
     
-    // FIX 2: Map legacy types to new API types and validate
+    // Map legacy types to new API types and validate
     const typeMapping: { [key: string]: string } = {
-      // Legacy to New API mappings
       'african_restaurant': 'restaurant',
       'asian_restaurant': 'restaurant', 
       'brunch_restaurant': 'restaurant',
@@ -556,7 +555,6 @@ const fetchNearbyPlaces = async (
       'vegetarian_restaurant': 'restaurant',
       'meal_takeaway': 'meal_takeaway',
       'meal_delivery': 'meal_delivery',
-      // Valid new API types (keep as-is)
       'restaurant': 'restaurant',
       'cafe': 'cafe', 
       'bar': 'bar',
@@ -569,7 +567,6 @@ const fetchNearbyPlaces = async (
       'restaurant', 'cafe', 'bar', 'night_club', 'meal_takeaway', 'meal_delivery',
       'bakery', 'food','tourist_attraction',
     ];
-    const validTypes = Object.keys(typeMapping).concat(validNewApiTypes);
     
     // Map legacy types to new API types and remove duplicates
     let mappedTypes = includedTypes
@@ -590,12 +587,12 @@ const fetchNearbyPlaces = async (
       includedTypes = options.types;
     }
     
-    // FIX 3: Ensure radius is within valid range (1-50000 meters)
+    // Ensure radius is within valid range (1-50000 meters)
     const radiusMeters = Math.min(Math.max(userData.searchRadius * 1000, 1), 50000);
     
-    // FIX 4: Create properly structured request body
+    // Create properly structured request body
     const requestBody: any = {
-      includedTypes: mappedTypes, // Use mapped types
+      includedTypes: mappedTypes,
       maxResultCount: 20,
       locationRestriction: {
         circle: {
@@ -608,14 +605,13 @@ const fetchNearbyPlaces = async (
       }
     };
 
-    // FIX 5: Only add pageToken if it's valid and not empty
+    // Only add pageToken if it's valid and not empty
     if (options?.pageToken && typeof options.pageToken === 'string' && options.pageToken.trim()) {
       requestBody.pageToken = options.pageToken.trim();
     }
 
     console.log('Places API Request:', JSON.stringify(requestBody, null, 2));
 
-    // FIX 6: Correct headers and field mask
     const response = await axios.post(
       'https://places.googleapis.com/v1/places:searchNearby',
       requestBody,
@@ -623,55 +619,73 @@ const fetchNearbyPlaces = async (
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': GOOGLE_API_KEY,
-          // FIX 7: Correct field mask - nextPageToken is NOT included here
           'X-Goog-FieldMask': 'places.id,places.displayName,places.types,places.formattedAddress,places.rating,places.location,places.photos'
         },
         timeout: 15000,
-        // FIX 8: Add request validation
-        validateStatus: (status) => status < 500 // Don't throw on 4xx errors
+        validateStatus: (status) => status < 500
       }
     );
 
-    // FIX 9: Better error handling
+    // Better error handling
     if (response.status !== 200) {
       console.error('API returned non-200 status:', response.status, response.data);
-      return { results: [], nextPageToken: null };
+      return { status: 'API_ERROR', results: [], nextPageToken: null };
     }
 
     console.log('Places API Response:', response.data);
 
     if (response.data?.places) {
       const results = response.data.places
-        .filter((place: any) => 
-          place.id && place.displayName?.text && // Ensure required fields exist
-          !options?.excludedTypes?.some(type => place.types?.includes(type))
-        )
-        .map((place: any) => ({
-          place_id: place.id,
-          name: place.displayName?.text || 'Unnamed Venue',
-          types: place.types || [],
-          vicinity: place.formattedAddress || 'Address not available',
-          rating: place.rating || 0,
-          geometry: {
-            location: {
-              lat: place.location?.latitude || 0,
-              lng: place.location?.longitude || 0
-            }
-          },
-          // FIX 10: Handle photos safely
-          photos: place.photos?.slice(0, 5).map((photo: any) => ({
-            photo_reference: photo.name?.split('/').pop() || ''
-          })) || []
-        }));
+        .filter((place: any) => {
+          // More robust filtering with null checks
+          if (!place?.id || !place?.displayName?.text) {
+            console.warn('Filtered out place missing required fields:', place);
+            return false;
+          }
+          
+          // Check excluded types
+          if (options?.excludedTypes?.some(type => place.types?.includes(type))) {
+            return false;
+          }
+          
+          return true;
+        })
+        .map((place: any) => {
+          try {
+            return {
+              place_id: place.id,
+              name: place.displayName?.text || 'Unnamed Venue',
+              types: Array.isArray(place.types) ? place.types : [],
+              vicinity: place.formattedAddress || 'Address not available',
+              rating: typeof place.rating === 'number' ? place.rating : 0,
+              geometry: {
+                location: {
+                  lat: place.location?.latitude || 0,
+                  lng: place.location?.longitude || 0
+                }
+              },
+              // Handle photos safely with more robust checking
+              photos: Array.isArray(place.photos) 
+                ? place.photos.slice(0, 5).map((photo: { name?: string }) => ({
+                    photo_reference: photo?.name?.split('/').pop() || ''
+                  })).filter((photo: { photo_reference: string }) => photo.photo_reference) // Remove empty references
+                : []
+            };
+          } catch (mapError) {
+            console.error('Error mapping place data:', mapError, place);
+            return null;
+          }
+        })
+        .filter(Boolean); // Remove any null results from mapping errors
       
       const nextToken = response.data.nextPageToken || null;
       setHasMorePlaces(!!nextToken);
       setNextPageToken(nextToken);
       
-      return { results, nextPageToken };
+      return { status: 'SUCCESS', results, nextPageToken };
     }
     
-    return { results: [], nextPageToken: null };
+    return { status: 'NO_RESULTS', results: [], nextPageToken: null };
     
   } catch (error) {
     console.error('Places fetch error:', error);
@@ -690,7 +704,6 @@ const fetchNearbyPlaces = async (
       
       console.error('Complete API Error Details:', JSON.stringify(errorDetails, null, 2));
       
-      // Log specific Google API error
       if (error.response?.data?.error) {
         console.error('Google API Error:', {
           code: error.response.data.error.code,
@@ -701,7 +714,7 @@ const fetchNearbyPlaces = async (
       }
     }
     
-    return { results: [], nextPageToken: null };
+    return { status: 'ERROR', results: [], nextPageToken: null };
   } finally {
     setPlacesLoading(false);
   }
